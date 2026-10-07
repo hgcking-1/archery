@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3학년 양궁 기록장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f3ec; --card:#fffdf8; --ink:#1d2321; --muted:#6b726d; --line:#e3ddcf;
+    --gold:#f2c230; --red:#d9412b; --blue:#2f7fc1; --black:#26292b; --green:#2f5d50;
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;min-height:100vh;
+       -webkit-tap-highlight-color:transparent}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 48px}
+  .wide{max-width:960px}
+  header.top{display:flex;align-items:center;gap:12px;margin:8px 0 22px}
+  .target{width:44px;height:44px;border-radius:50%;flex:none;
+    background:radial-gradient(circle,var(--gold) 0 18%,var(--red) 18% 38%,var(--blue) 38% 58%,var(--black) 58% 78%,#fff 78% 100%);
+    box-shadow:0 0 0 2px var(--black) inset}
+  h1{font-family:"Gowun Dodum",sans-serif;font-size:24px;margin:0;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 2px 0 rgba(0,0,0,.03)}
+  label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+  input,textarea,select{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(47,93,80,.15)}
+  .pin{letter-spacing:10px;text-align:center;font-size:26px;font-weight:800}
+  button{font:inherit;cursor:pointer;border:none;border-radius:12px;padding:14px 18px;font-weight:700;font-size:16px}
+  .btn{background:var(--green);color:#fff;width:100%;margin-top:18px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ghost{background:transparent;color:var(--muted);text-decoration:underline;font-weight:400;font-size:13px;padding:8px}
+  .line-btn{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px}
+  .ok{color:var(--green)}
+  .center{text-align:center}
+  .hidden{display:none !important}
+  .who{font-size:15px;color:var(--muted)}
+  .who b{display:block;font-size:30px;color:var(--ink);margin:6px 0 2px;font-family:"Gowun Dodum",sans-serif}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .note{background:#fff7dc;border:1px dashed #e7cf7a;border-radius:12px;padding:14px;font-size:14px;color:#6a5a1d;margin-top:16px}
+  .foot{text-align:center;margin-top:18px}
+  /* 학생 기록 화면 */
+  .who{font-size:13px;color:var(--muted);text-align:left}
+  .who b{display:inline;font-size:22px;margin:0 6px 0 0}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+  .stats>div{background:#f4f0e6;border-radius:12px;padding:10px 4px;text-align:center}
+  .stats span{display:block;font-size:26px;font-weight:800;line-height:1.1}
+  .stats small{color:var(--muted);font-size:12px}
+  .stats .hl{background:var(--green);color:#fff}.stats .hl small{color:#d5e6de}
+  .arrows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;min-height:10px}
+  .end{display:grid;grid-template-columns:34px repeat(6,1fr);gap:5px;align-items:center}
+  .end .lab{font-size:11px;color:var(--muted)}
+  .ar{height:38px;border-radius:50%;aspect-ratio:1;justify-self:center;display:grid;place-items:center;font-weight:800;font-size:15px;border:2px solid transparent;padding:0}
+  .ar.empty{border:1.5px dashed var(--line);background:transparent}
+  .ar.sel{outline:3px solid var(--green);outline-offset:2px}
+  .tgt-wrap{position:relative;max-width:420px;margin:6px auto 0}
+  #tgt{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+  .live{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);background:var(--black);color:#fff;font-weight:800;font-size:22px;padding:6px 16px;border-radius:12px;pointer-events:none;z-index:2;white-space:nowrap}
+  .seg{display:flex;background:#efe9dc;border-radius:12px;padding:4px;gap:4px;margin:4px 0 30px}
+  .seg button{flex:1;padding:9px 6px;font-size:14px;background:transparent;color:var(--muted);border-radius:9px}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  #missBtn:disabled,#tgt.off{opacity:.45}
+  .z-gold{background:var(--gold);color:#3a2d00}
+  .z-red{background:var(--red);color:#fff}
+  .z-blue{background:var(--blue);color:#fff}
+  .z-black{background:var(--black);color:#fff}
+  .z-white{background:#fff;color:var(--ink);border:2px solid #cfc8b8 !important}
+  .z-miss{background:#a7aaa6;color:#fff}
+  .row button{padding:12px 6px;font-size:15px}
+  .full{background:#eef5f1;border-radius:12px;padding:12px;text-align:center;color:var(--green);font-weight:700;margin-top:12px}
+  /* 3단계: 그래프·순위 */
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink);margin:2px 0 6px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .legend i.dot{width:9px;height:9px;border-radius:50%}
+  .chart-wrap{position:relative}
+  #chart{display:block;width:100%;height:240px;touch-action:pan-y}
+  .tip{position:absolute;top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);pointer-events:none;z-index:3;min-width:120px}
+  .tip b{display:block;margin-bottom:4px;font-size:13px}
+  .tip div{display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .tip i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+  .tbl{margin-top:10px;font-size:14px}.tbl summary{cursor:pointer;color:var(--muted);font-size:13px}
+  .tbl table{margin-top:8px;font-size:13px}
+  .date-sel{width:auto;font-size:14px;padding:6px 10px;border-radius:9px}
+  .rk td{padding:9px 4px}
+  .rk tr.mine td{background:#eef5f1;font-weight:700}
+  .rk .medal{font-size:18px}
+  .rk .num{font-variant-numeric:tabular-nums}
+  .cls-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .sec-title{font-weight:700;font-size:14px;margin:18px 0 6px}
+  /* 선생님 화면 */
+  .rk td.act{white-space:nowrap}
+  .bar .row button{white-space:nowrap}
+  .tbl-s{font-size:14px}
+  .tbl-s td,.tbl-s th{padding:8px 5px}
+  .tbl-s tbody tr:hover{background:#faf6ec}
+  .scores{font-size:12px;color:var(--muted);text-align:left;max-width:280px;line-height:1.5}
+  .modal{position:fixed;inset:0;background:rgba(20,22,21,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;z-index:8;overflow-y:auto}
+  .modal-box{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:440px}
+  .kp{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:10px}
+  .kp button{padding:10px 0;font-size:16px;font-weight:800;border-radius:10px}
+  .danger{background:#fff;border:1.5px solid var(--red);color:var(--red)}
+  .danger.armed{background:var(--red);color:#fff}
+  .save{background:var(--green);color:#fff}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px}
+  .chip{background:#fff;border:1.5px solid var(--line);color:var(--ink);padding:8px 14px;border-radius:999px;font-size:14px;font-weight:600}
+  .chip.on{background:var(--green);border-color:var(--green);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}
+  th{font-size:13px;color:var(--muted);font-weight:600}
+  td input{font-size:16px;padding:6px 8px;width:90px;text-align:center}
+  .small{font-size:13px;color:var(--muted)}
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .mini{padding:7px 12px;font-size:13px;border-radius:9px}
+  .save{background:var(--green);color:#fff}
+  textarea{font-size:14px;min-height:150px;font-family:ui-monospace,Consolas,monospace}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--black);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;z-index:9;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .loading{color:var(--muted);text-align:center;padding:40px 0}
+</style>
+</head>
+<body>
+<div id="app" class="wrap">
+  <header class="top">
+    <div class="target" aria-hidden="true"></div>
+    <div><h1>3학년 양궁 기록장</h1><div class="sub">서울사대부설여중 체육 · 양궁 수업</div></div>
+  </header>
+
+  <div id="demoBar" class="note hidden" style="margin:0 0 14px">
+    <b>미리보기 모드</b> — 아직 Firebase 설정 전이라 이 컴퓨터의 크롬에만 저장돼요.<br>
+    연습용 학생: <b>3101</b> / 1111 · <b>3102</b> / 2222 · <b>3201</b> / 3333 · [선생님 로그인]은 바로 열려요.
+  </div>
+  <div id="vLoading" class="loading">불러오는 중…</div>
+
+  <!-- 학생 로그인 -->
+  <section id="vLogin" class="card hidden">
+    <form id="loginForm" autocomplete="off">
+      <label for="sid">학번</label>
+      <input id="sid" inputmode="numeric" maxlength="4" placeholder="예: 3101" required>
+      <label for="pin">비밀번호 (숫자 4자리)</label>
+      <input id="pin" class="pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" required>
+      <button class="btn" id="loginBtn" type="submit">들어가기</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+    <div class="foot"><button class="ghost" id="teacherLoginBtn">선생님 로그인</button></div>
+  </section>
+
+  <!-- 학생: 오늘 기록 -->
+  <section id="vStudent" class="hidden">
+    <div class="card me-card">
+      <div class="bar">
+        <div class="who" id="whoBox"></div>
+        <button class="mini line-btn" id="logoutBtn">로그아웃</button>
+      </div>
+      <div class="small" style="margin-top:6px">내 이름이 아니면 바로 로그아웃하고 선생님께 알려 주세요.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="bar">
+        <b id="todayLabel">오늘의 기록</b>
+        <span class="small" id="saveState"></span>
+      </div>
+      <div class="stats">
+        <div><span id="stCount">0</span><small>/ 30발</small></div>
+        <div><span id="stTotal">0</span><small>합계</small></div>
+        <div class="hl"><span id="stAvg">–</span><small>한 발 평균</small></div>
+      </div>
+      <div class="seg" id="markMode">
+        <button class="on" data-m="today">오늘 화살만</button>
+        <button data-m="all">지금까지 모두</button>
+      </div>
+      <div class="tgt-wrap">
+        <div class="live hidden" id="live"></div>
+        <svg id="tgt" viewBox="-1.12 -1.12 2.24 2.24" aria-label="과녁판: 화살이 맞은 자리를 누르세요"></svg>
+      </div>
+      <div class="small center" id="editHint"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="z-miss" id="missBtn">M 빗나감</button>
+        <button class="line-btn" id="undoBtn">⌫ 지우기</button>
+        <button class="line-btn hidden" id="cancelSel">취소</button>
+      </div>
+      <div id="arrows" class="arrows" style="margin-top:14px"></div>
+    </div>
+
+    <!-- 3단계: 그래프와 순위 -->
+    <div class="card" style="margin-top:12px" id="boardCard">
+      <div class="bar">
+        <b>기록 살펴보기</b>
+        <button class="mini line-btn" id="refreshBtn">↻ 새로고침</button>
+      </div>
+      <div class="tabs" id="boardTabs" style="margin-top:12px">
+        <button class="chip on" data-t="graph">📈 날짜별 평균</button>
+        <button class="chip" data-t="class">우리 반 순위</button>
+        <button class="chip" data-t="all">전체 TOP 20</button>
+      </div>
+
+      <div id="tabGraph">
+        <div class="seg" id="graphMode" style="margin-bottom:10px">
+          <button class="on" data-g="me">나와 우리 반</button>
+          <button data-g="cls">6개 반 비교</button>
+        </div>
+        <div class="legend" id="legend"></div>
+        <div class="chart-wrap" id="chartWrap"><div class="tip hidden" id="tip"></div><svg id="chart"></svg></div>
+        <div class="small" id="chartNote"></div>
+        <details class="tbl"><summary>표로 보기</summary><div id="chartTable"></div></details>
+      </div>
+
+      <div id="tabRank" class="hidden">
+        <div class="bar" style="margin-bottom:8px">
+          <span class="small" id="rankTitle"></span>
+          <select id="rankDate" class="date-sel"></select>
+        </div>
+        <div id="rankBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 선생님 화면 -->
+  <section id="vTeacher" class="hidden">
+    <div class="card">
+      <div class="bar">
+        <div><b>선생님 관리 화면</b><div class="small" id="tEmail"></div></div>
+        <button class="mini line-btn" id="tLogout">로그아웃</button>
+      </div>
+      <div class="tabs" id="tTabs" style="margin-top:14px">
+        <button class="chip on" data-p="rec">📋 날짜별 기록</button>
+        <button class="chip" data-p="avg">📈 반별 평균</button>
+        <button class="chip" data-p="roster">👥 명단·비밀번호</button>
+      </div>
+    </div>
+
+    <!-- 날짜별 기록 -->
+    <div class="card t-pane" id="pRec" style="margin-top:12px">
+      <div class="bar">
+        <select id="tDate" class="date-sel"></select>
+        <div class="row" style="flex:0 0 auto;gap:6px">
+          <button class="mini line-btn" id="tRefresh">↻ 새로고침</button>
+          <button class="mini save" id="csvBtn">⬇ 엑셀(CSV) 내려받기</button>
+        </div>
+      </div>
+      <div class="tabs" id="tClassTabs" style="margin-top:10px"></div>
+      <div class="small" id="tRecSum"></div>
+      <div id="tRecBox" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- 반별 평균 -->
+    <div class="card t-pane hidden" id="pAvg" style="margin-top:12px">
+      <b>반별 한 발 평균 (날짜별)</b>
+      <div class="legend" id="tLegend" style="margin-top:10px"></div>
+      <div class="chart-wrap"><div class="tip hidden" id="tTip"></div><svg id="tChart"></svg></div>
+      <div class="small" id="tChartNote"></div>
+      <div id="tAvgTable" style="overflow-x:auto;margin-top:10px"></div>
+    </div>
+
+    <!-- 명단·비밀번호 -->
+    <div class="card t-pane hidden" id="pRoster" style="margin-top:12px">
+      <div class="tabs" id="classTabs"></div>
+      <div id="rosterBox"><div class="loading">명단 불러오는 중…</div></div>
+    </div>
+
+    <div class="card t-pane hidden" id="pPaste" style="margin-top:16px">
+      <b>명단 붙여넣기</b>
+      <p class="small">엑셀 '전체명단' 시트에서 <b>반 · 번호 · 학번 · 이름 · 비밀번호</b> 칸을 통째로 복사해 아래에 붙여넣고 [명단 저장]을 누르세요.
+      이미 있는 학생은 새 내용으로 바뀌고, 없는 학생은 추가됩니다.</p>
+      <textarea id="pasteBox" placeholder="1	1	3101	홍길동	1234&#10;…"></textarea>
+      <div class="err" id="pasteMsg"></div>
+      <button class="btn" id="pasteBtn">명단 저장</button>
+    </div>
+  </section>
+
+  <section id="vNotTeacher" class="card hidden center">
+    <p>이 구글 계정은 관리 권한이 없어요.</p>
+    <p class="small" id="ntEmail"></p>
+    <button class="btn line-btn" id="ntLogout">돌아가기</button>
+  </section>
+</div>
+<div class="modal hidden" id="edModal">
+  <div class="modal-box">
+    <div class="bar"><b id="edTitle"></b><button class="mini line-btn" id="edClose">닫기</button></div>
+    <div class="small" id="edSub"></div>
+    <svg id="edTgt" viewBox="-1.12 -1.12 2.24 2.24" style="width:200px;display:block;margin:10px auto"></svg>
+    <div id="edArrows" class="arrows"></div>
+    <div class="small center" id="edHint">고칠 화살을 누른 뒤 아래에서 새 점수를 고르세요.</div>
+    <div class="kp" id="edPad"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="line-btn" id="edDelArrow">선택한 화살 지우기</button>
+      <button class="line-btn" id="edAdd">화살 추가</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="danger" id="edDelAll">이 기록 전체 삭제</button>
+      <button class="save" id="edSave">저장</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* ▼▼ Firebase 설정: 콘솔에서 복사한 값으로 바꿔 넣으세요 ▼▼
+   (바꾸기 전에는 '미리보기 모드'로 열려요. 자료는 이 컴퓨터의 크롬에만 저장돼요.) */
+const firebaseConfig = {
+  apiKey: "AIzaSyAd3KqkCa_WSgBub2gGj8mai6shP8t9KsA",
+  authDomain: "archery-snug.firebaseapp.com",
+  projectId: "archery-snug",
+  storageBucket: "archery-snug.firebasestorage.app",
+  messagingSenderId: "567917417048",
+  appId: "1:567917417048:web:5221673a8c27a4d2a8b02d"
+};
+/* ▲▲ 여기까지 ▲▲ */
+const TEACHERS = ["teacher1@example.com", "teacher2@example.com"];   // 관리 선생님 구글 계정 — 자리표시자! 배포 전에 실제 이메일로 바꾸세요 (보안 규칙 파일과 같아야 함)
+const CLASSES = [1,2,3,4,5,6];
+const DEMO = firebaseConfig.apiKey.includes("붙여넣기");
+
+const $ = id => document.getElementById(id);
+const views = ["vLoading","vLogin","vStudent","vTeacher","vNotTeacher"];
+const show = v => views.forEach(x => $(x).classList.toggle("hidden", x !== v));
+const toast = msg => { const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const app$ = $("app");
+const randomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), b => b.toString(36).padStart(2,"0")).join("").slice(0,14);
+const todayKST = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });   // 예: 2026-10-07
+const MAX_ARROWS = 30, PER_END = 6;
+const pts = k => k === "X" ? 10 : k === "M" ? 0 : Number(k);
+const zone = k => ({X:"gold","10":"gold","9":"gold","8":"red","7":"red","6":"blue","5":"blue","4":"black","3":"black","2":"white","1":"white",M:"miss"})[k];
+
+/* =====================================================================
+   자료 저장소: 실제(Firebase) 또는 미리보기(이 PC 크롬에만 저장) 중 하나
+   화면 코드는 아래 함수들만 사용함
+   ===================================================================== */
+let store;
+
+async function makeFirebaseStore() {
+  const V = "https://www.gstatic.com/firebasejs/10.12.2/";
+  const { initializeApp } = await import(V + "firebase-app.js");
+  const A = await import(V + "firebase-auth.js");
+  const F = await import(V + "firebase-firestore.js");
+  const app = initializeApp(firebaseConfig);
+  const auth = A.getAuth(app), db = F.getFirestore(app);
+  let busy = false;
+  return {
+    onChange(cb) {
+      A.onAuthStateChanged(auth, async user => {
+        if (busy) return;
+        if (!user) return cb(null);
+        if (!user.isAnonymous) return cb({ kind: "google", email: user.email });
+        try {
+          const link = await F.getDoc(F.doc(db, "links", user.uid));
+          if (!link.exists()) { await A.signOut(auth); return; }
+          cb({ kind: "student", sid: link.data().sid });
+        } catch (e) { console.error(e); await A.signOut(auth); }
+      });
+    },
+    async studentLogin(sid, pin) {
+      busy = true;
+      try {
+        const cred = await A.signInAnonymously(auth);
+        // 학번·비밀번호가 틀리면 보안 규칙이 여기서 거절함
+        await F.setDoc(F.doc(db, "links", cred.user.uid), { sid, cls: Number(sid[1]), pin, at: F.serverTimestamp() });
+      } catch (e) { await A.signOut(auth).catch(()=>{}); throw e; }
+      finally { busy = false; }
+    },
+    async teacherLogin() { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); },
+    async logout() {
+      const u = auth.currentUser;
+      if (u && u.isAnonymous) { try { await F.deleteDoc(F.doc(db, "links", u.uid)); } catch (e) {} }
+      await A.signOut(auth);
+    },
+    async getStudent(sid) { return (await F.getDoc(F.doc(db, "students", sid))).data(); },
+    async listClass(cls) {
+      const qs = await F.getDocs(F.query(F.collection(db, "students"), F.where("cls", "==", cls)));
+      const list = qs.docs.map(d => d.data()).sort((a,b) => a.no - b.no);
+      const sec = await Promise.all(list.map(s => F.getDoc(F.doc(db, "secrets", s.sid))));
+      sec.forEach((d,i) => list[i].pin = d.exists() ? d.data().pin : "");
+      return list;
+    },
+    async savePin(sid, pin) { await F.setDoc(F.doc(db, "secrets", sid), { pin }); },
+    async getSession(sid, date) {
+      const d = await F.getDoc(F.doc(db, "sessions", `${sid}_${date}`));
+      return d.exists() ? d.data() : null;
+    },
+    async listAllStudents() { return (await F.getDocs(F.collection(db, "students"))).docs.map(d => d.data()); },
+    async getAllSessions() { return (await F.getDocs(F.collection(db, "sessions"))).docs.map(d => d.data()); },
+    async deleteSession(stu, date) {
+      const b = F.writeBatch(db);
+      b.delete(F.doc(db, "sessions", `${stu.sid}_${date}`));
+      if (stu.anon) b.delete(F.doc(db, "pub", `${date}_${stu.anon}`));
+      await b.commit();
+    },
+    async listClassNames(cls) {
+      const qs = await F.getDocs(F.query(F.collection(db, "students"), F.where("cls", "==", cls)));
+      return qs.docs.map(d => ({ sid: d.id, name: d.data().name }));
+    },
+    async getClassSessions(cls) {
+      const qs = await F.getDocs(F.query(F.collection(db, "sessions"), F.where("cls", "==", cls)));
+      return qs.docs.map(d => d.data());
+    },
+    async getPub() {
+      const qs = await F.getDocs(F.collection(db, "pub"));
+      return qs.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    async getMySessions(stu) {
+      const qs = await F.getDocs(F.query(F.collection(db, "sessions"), F.where("cls", "==", stu.cls), F.where("sid", "==", stu.sid)));
+      return qs.docs.map(d => d.data()).sort((a, b) => a.date < b.date ? -1 : 1);
+    },
+    async saveSession(stu, rec) {
+      // 이름이 들어간 기록(우리 반만 볼 수 있음) + 이름 없는 기록(다른 반 평균·전체 순위용)
+      const b = F.writeBatch(db);
+      b.set(F.doc(db, "sessions", `${stu.sid}_${rec.date}`), { sid: stu.sid, cls: stu.cls, ...rec, updatedAt: F.serverTimestamp() });
+      if (stu.anon) b.set(F.doc(db, "pub", `${rec.date}_${stu.anon}`), { cls: stu.cls, date: rec.date, count: rec.count, total: rec.total, xs: rec.xs, avg: rec.avg });
+      await b.commit();
+    },
+    async saveRoster(rows) {
+      const old = {};
+      (await F.getDocs(F.collection(db, "students"))).forEach(d => old[d.id] = d.data());
+      for (let i = 0; i < rows.length; i += 200) {          // 한 번에 최대 200명씩 저장
+        const b = F.writeBatch(db);
+        rows.slice(i, i+200).forEach(r => {
+          const anon = old[r.sid]?.anon || randomKey();
+          b.set(F.doc(db, "students", r.sid), { sid: r.sid, cls: r.cls, no: r.no, name: r.name, anon });
+          b.set(F.doc(db, "secrets", r.sid), { pin: r.pin });
+        });
+        await b.commit();
+      }
+    }
+  };
+}
+
+function makeDemoStore() {
+  const KEY = "archery-demo";
+  const seed = { students: {
+      "3101": { sid:"3101", cls:1, no:1, name:"김연습", pin:"1111" },
+      "3102": { sid:"3102", cls:1, no:2, name:"이연습", pin:"2222" },
+      "3201": { sid:"3201", cls:2, no:1, name:"박연습", pin:"3333" } }, session: null };
+  let data;
+  try { data = JSON.parse(localStorage.getItem(KEY)) || seed; } catch (e) { data = seed; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  let cb = () => {};
+  const emit = () => cb(data.session);
+  const wait = () => new Promise(r => setTimeout(r, 250));
+  return {
+    onChange(f) { cb = f; emit(); },
+    async studentLogin(sid, pin) {
+      await wait();
+      const s = data.students[sid];
+      if (!s || s.pin !== pin) throw new Error("wrong");
+      data.session = { kind: "student", sid }; save();
+    },
+    async teacherLogin() { data.session = { kind: "google", email: TEACHERS[0] }; save(); emit(); },
+    async logout() { data.session = null; save(); emit(); },
+    async getStudent(sid) { const { pin, ...rest } = data.students[sid]; return rest; },
+    async listClass(cls) { return Object.values(data.students).filter(s => s.cls === cls).sort((a,b) => a.no - b.no).map(s => ({...s})); },
+    async savePin(sid, pin) { data.students[sid].pin = pin; save(); },
+    async saveRoster(rows) { rows.forEach(r => data.students[r.sid] = { anon: data.students[r.sid]?.anon || randomKey(), ...r }); save(); },
+    async listAllStudents() { return Object.values(data.students).map(({ pin, ...r }) => r); },
+    async getAllSessions() { return Object.values(data.sessions || {}); },
+    async deleteSession(stu, date) { delete (data.sessions || {})[`${stu.sid}_${date}`]; delete (data.pub || {})[`${date}_${stu.anon || stu.sid}`]; save(); },
+    async listClassNames(cls) { return Object.values(data.students).filter(s => s.cls === cls).map(s => ({ sid: s.sid, name: s.name })); },
+    async getClassSessions(cls) { return Object.values(data.sessions || {}).filter(s => s.cls === cls); },
+    async getPub() { return Object.entries(data.pub || {}).map(([id, v]) => ({ id, ...v })); },
+    async getMySessions(stu) { return Object.values(data.sessions || {}).filter(s => s.sid === stu.sid).sort((a, b) => a.date < b.date ? -1 : 1); },
+    async getSession(sid, date) { await wait(); return (data.sessions || {})[`${sid}_${date}`] || null; },
+    async saveSession(stu, rec) {
+      data.sessions = data.sessions || {}; data.pub = data.pub || {};
+      data.sessions[`${stu.sid}_${rec.date}`] = { sid: stu.sid, cls: stu.cls, ...rec };
+      data.pub[`${rec.date}_${stu.anon || stu.sid}`] = { cls: stu.cls, date: rec.date, count: rec.count, total: rec.total, xs: rec.xs, avg: rec.avg };
+      save();
+    }
+  };
+}
+
+/* ---------- 화면 전환: 누가 로그인했는지에 따라 ---------- */
+let loggingIn = false;
+async function route(session) {
+  if (loggingIn) return;
+  app$.classList.remove("wide");
+  if (!session) return show("vLogin");
+  if (session.kind === "google") {
+    if (TEACHERS.includes(session.email)) { app$.classList.add("wide"); openTeacher(session.email); }
+    else { $("ntEmail").textContent = session.email; show("vNotTeacher"); }
+    return;
+  }
+  try { await openStudent(session.sid); } catch (e) { console.error(e); store.logout(); }
+}
+
+/* ---------- 학생 로그인 ---------- */
+$("sid").addEventListener("input", e => e.target.value = e.target.value.replace(/\D/g,""));
+$("pin").addEventListener("input", e => e.target.value = e.target.value.replace(/\D/g,""));
+
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const sid = $("sid").value.trim(), pin = $("pin").value.trim();
+  $("loginErr").textContent = "";
+  if (!/^3[1-6]\d{2}$/.test(sid)) return $("loginErr").textContent = "학번 4자리를 확인해 주세요. (예: 3101)";
+  if (!/^\d{4}$/.test(pin))       return $("loginErr").textContent = "비밀번호는 숫자 4자리예요.";
+  $("loginBtn").disabled = true; $("loginBtn").textContent = "확인 중…";
+  loggingIn = true;
+  try {
+    await store.studentLogin(sid, pin);
+    $("pin").value = "";
+    await openStudent(sid);
+  } catch (err) {
+    console.warn(err);
+    $("loginErr").textContent = "학번이나 비밀번호가 맞지 않아요.";
+    show("vLogin");
+  } finally {
+    loggingIn = false;
+    $("loginBtn").disabled = false; $("loginBtn").textContent = "들어가기";
+  }
+});
+
+let me = null, arrows = [], sel = -1, today = "", markMode = "today", history = null, drag = null;
+const norm = a => typeof a === "string" ? { k: a } : a;     // 예전 형식(점수만) 기록도 읽기
+async function openStudent(sid) {
+  me = { ...(await store.getStudent(sid)), sid };
+  $("whoBox").innerHTML = `<b>${esc(me.name)}</b>3학년 ${me.cls}반 ${me.no}번 · ${esc(me.sid)}`;
+  today = todayKST();
+  const [y, m, d] = today.split("-").map(Number);
+  const wd = "일월화수목금토"[new Date(y, m-1, d).getDay()];
+  $("todayLabel").textContent = `${m}월 ${d}일(${wd}) 기록`;
+  const rec = await store.getSession(me.sid, today);
+  arrows = rec ? rec.arrows.map(norm) : []; sel = -1; history = null; classNames = {};
+  setMarkMode("today");
+  $("saveState").textContent = rec ? "저장된 기록을 불러왔어요" : "";
+  show("vStudent");
+  drawScore();
+  loadBoard();
+}
+
+/* ---------- 과녁판 그리기 (세계양궁 10겹 과녁: 1~2 흰색, 3~4 검정, 5~6 파랑, 7~8 빨강, 9~10 노랑) ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+const RING_FILL = { 1:"#ffffff",2:"#ffffff",3:"#26292b",4:"#26292b",5:"#2f8fd8",6:"#2f8fd8",7:"#e0412b",8:"#e0412b",9:"#f6cb2f",10:"#f6cb2f" };
+const RING_LINE = n => (n === 3 || n === 4) ? "#ffffff" : "#26292b";
+(function buildTarget() {
+  let g = "";
+  for (let n = 1; n <= 10; n++) {
+    const r = (11 - n) / 10;
+    g += `<circle r="${r}" fill="${RING_FILL[n]}" stroke="${RING_LINE(n)}" stroke-width="${n===1?0.012:0.006}"/>`;
+  }
+  g += `<circle r="0.05" fill="none" stroke="#26292b" stroke-width="0.004"/>`;
+  g += `<path d="M-.015 0H.015M0 -.015V.015" stroke="#26292b" stroke-width="0.004"/>`;
+  // 바깥쪽 점수 숫자
+  for (let n = 1; n <= 10; n++) {
+    const r = (10.5 - n) / 10, fill = (n===3||n===4||n===5||n===6||n===7||n===8) ? "#fff" : "#26292b";
+    g += `<text x="${r}" y="0.022" font-size="0.062" text-anchor="middle" fill="${fill}" font-weight="700" opacity=".75" pointer-events="none">${n}</text>`;
+  }
+  $("tgt").innerHTML = `<g id="face">${g}</g><g id="histMarks"></g><g id="marks"></g><g id="dragMark"></g>`;
+})();
+
+function scoreAt(x, y) {
+  const r = Math.hypot(x, y);
+  if (r <= 0.05) return "X";
+  if (r > 1) return "M";
+  return String(Math.min(10, 11 - Math.ceil(r * 10)));
+}
+function svgPoint(e) {
+  const b = $("tgt").getBoundingClientRect();
+  const x = ((e.clientX - b.left) / b.width) * 2.24 - 1.12;
+  const y = ((e.clientY - b.top) / b.height) * 2.24 - 1.12;
+  const c = v => Math.max(-1.1, Math.min(1.1, Math.round(v * 1000) / 1000));
+  return { x: c(x), y: c(y) };
+}
+function xMark(x, y, { size = 0.05, color = "#111", halo = "#fff", w = 0.018, opacity = 1 } = {}) {
+  const d = `M${x-size} ${y-size}L${x+size} ${y+size}M${x+size} ${y-size}L${x-size} ${y+size}`;
+  return `<g opacity="${opacity}" pointer-events="none"><path d="${d}" stroke="${halo}" stroke-width="${w*2.2}" stroke-linecap="round"/>` +
+         `<path d="${d}" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/></g>`;
+}
+function drawMarks() {
+  let h = "";
+  arrows.forEach((a, i) => {
+    if (a.x === undefined) return;                       // M(위치 없음)은 표시 안 함
+    const last = i === arrows.length - 1;
+    h += xMark(a.x, a.y, { color: last ? "#e6007e" : "#111", size: last ? 0.06 : 0.05 });
+    if (i === sel) h += `<circle cx="${a.x}" cy="${a.y}" r="0.1" fill="none" stroke="#2f5d50" stroke-width="0.02" pointer-events="none"/>`;
+  });
+  $("marks").innerHTML = h;
+  let hh = "";
+  if (markMode === "all" && history) {
+    history.forEach(s => s.arrows.map(norm).forEach(a => {
+      if (a.x !== undefined) hh += xMark(a.x, a.y, { size: 0.035, color: "#6b6f6c", w: 0.012, opacity: 0.6 });
+    }));
+  }
+  $("histMarks").innerHTML = hh;
+}
+
+/* 과녁판 누르기: 누른 채로 손가락을 움직여 위치를 맞추고, 떼면 기록 */
+const full = () => arrows.length >= MAX_ARROWS && sel < 0;
+$("tgt").addEventListener("pointerdown", e => {
+  if (todayKST() !== today) { toast("날짜가 바뀌어 오늘 기록을 새로 열어요."); openStudent(me.sid); return; }
+  if (full()) return toast(`하루 최대 ${MAX_ARROWS}발까지 기록할 수 있어요. 고치려면 아래 화살을 눌러 고르세요.`);
+  e.preventDefault();
+  $("tgt").setPointerCapture(e.pointerId);
+  drag = svgPoint(e); showDrag();
+});
+$("tgt").addEventListener("pointermove", e => { if (!drag) return; drag = svgPoint(e); showDrag(); });
+$("tgt").addEventListener("pointerup", e => {
+  if (!drag) return;
+  const p = svgPoint(e), a = { k: scoreAt(p.x, p.y), x: p.x, y: p.y };
+  drag = null; hideDrag();
+  addOrReplace(a);
+});
+$("tgt").addEventListener("pointercancel", () => { drag = null; hideDrag(); });
+function showDrag() {
+  const k = scoreAt(drag.x, drag.y);
+  $("dragMark").innerHTML = `<circle cx="${drag.x}" cy="${drag.y}" r="0.13" fill="none" stroke="#e6007e" stroke-width="0.012" stroke-dasharray="0.03 0.02"/>` +
+                            xMark(drag.x, drag.y, { color: "#e6007e", size: 0.06 });
+  $("live").textContent = k === "M" ? "M (빗나감)" : k === "X" ? "X (10점)" : `${k}점`;
+  $("live").classList.remove("hidden");
+}
+function hideDrag() { $("dragMark").innerHTML = ""; $("live").classList.add("hidden"); }
+
+function addOrReplace(a) {
+  if (sel >= 0) { arrows[sel] = a; sel = -1; }
+  else if (arrows.length < MAX_ARROWS) arrows.push(a);
+  else return toast(`하루 최대 ${MAX_ARROWS}발까지 기록할 수 있어요.`);
+  if (history) { const h = history.find(s => s.date === today); if (h) h.arrows = [...arrows]; }
+  drawScore(); saveSoon();
+}
+$("missBtn").onclick = () => {
+  if (todayKST() !== today) { toast("날짜가 바뀌어 오늘 기록을 새로 열어요."); return openStudent(me.sid); }
+  addOrReplace({ k: "M" });
+};
+$("arrows").onclick = e => {
+  const i = e.target.dataset.i; if (i === undefined) return;
+  sel = (sel === +i) ? -1 : +i; drawScore();
+};
+$("undoBtn").onclick = () => {
+  if (sel >= 0) { arrows.splice(sel, 1); sel = -1; }
+  else if (arrows.length) arrows.pop();
+  else return;
+  drawScore(); saveSoon();
+};
+$("cancelSel").onclick = () => { sel = -1; drawScore(); };
+
+/* 오늘 화살만 / 지금까지 모두 */
+function setMarkMode(m) {
+  markMode = m;
+  $("markMode").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
+}
+$("markMode").onclick = async e => {
+  const m = e.target.dataset.m; if (!m) return;
+  setMarkMode(m);
+  if (m === "all" && !history) {
+    try { history = (await store.getMySessions(me)).filter(s => s.date !== today); }
+    catch (err) { console.error(err); history = []; toast("지난 기록을 불러오지 못했어요."); }
+  }
+  drawScore();
+};
+
+function summary() {
+  const total = arrows.reduce((s, a) => s + pts(a.k), 0);
+  return { date: today, arrows: arrows.map(a => ({ ...a })), count: arrows.length, total,
+           xs: arrows.filter(a => a.k === "X").length,
+           avg: arrows.length ? Math.round(total / arrows.length * 100) / 100 : 0 };
+}
+
+function drawScore() {
+  const r = summary();
+  $("stCount").textContent = r.count;
+  $("stTotal").textContent = r.total;
+  $("stAvg").textContent = r.count ? r.avg.toFixed(2) : "–";
+  drawMarks();
+  // 6발씩 한 줄(엔드)로 점수 보여 주기
+  const slots = Math.min(MAX_ARROWS, Math.max(PER_END, Math.ceil((arrows.length + 1) / PER_END) * PER_END));
+  let html = "";
+  for (let e = 0; e < slots / PER_END; e++) {
+    html += `<div class="end"><span class="lab">${e+1}엔드</span>`;
+    for (let j = 0; j < PER_END; j++) {
+      const i = e * PER_END + j, a = arrows[i];
+      html += a ? `<button class="ar z-${zone(a.k)} ${i===sel?"sel":""}" data-i="${i}" aria-label="${i+1}번째 화살 ${a.k}">${a.k}</button>`
+                : `<span class="ar empty"></span>`;
+    }
+    html += `</div>`;
+  }
+  $("arrows").innerHTML = html;
+  const isFull = full();
+  $("tgt").classList.toggle("off", isFull);
+  $("missBtn").disabled = isFull;
+  const histN = markMode === "all" && history ? history.reduce((n, s) => n + s.arrows.length, 0) : 0;
+  $("editHint").textContent = sel >= 0 ? `${sel+1}번째 화살을 고치는 중 — 과녁에서 맞은 자리를 다시 누르거나 [지우기]를 누르세요.`
+                            : isFull ? `오늘 ${MAX_ARROWS}발을 모두 기록했어요. 고치려면 아래 점수 동그라미를 눌러 고르세요.`
+                            : `화살이 맞은 자리를 누르세요. 누른 채로 움직이면 위치를 맞출 수 있어요.` +
+                              (markMode === "all" ? ` (회색 X = 지난 기록 ${histN}발)` : "");
+  $("undoBtn").textContent = sel >= 0 ? "⌫ 이 화살" : "⌫ 지우기";
+  $("cancelSel").classList.toggle("hidden", sel < 0);
+}
+
+/* 누를 때마다 0.6초 뒤 자동 저장 (빨리 연달아 눌러도 한 번만 저장) */
+let saveTimer = null, saving = Promise.resolve();
+function saveSoon() {
+  $("saveState").textContent = "저장 중…";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const rec = summary();
+    saving = saving.then(() => store.saveSession(me, rec))
+      .then(() => { $("saveState").textContent = "✓ 저장됨"; boardSoon(); })
+      .catch(e => { console.error(e); $("saveState").innerHTML = `<span class="err">저장 실패 — 인터넷을 확인하세요</span>`; });
+  }, 600);
+}
+$("logoutBtn").onclick = async () => { clearTimeout(saveTimer); if ($("saveState").textContent === "저장 중…") await store.saveSession(me, summary()).catch(()=>{}); await saving; store.logout(); };
+
+/* =====================================================================
+   3단계: 날짜별 평균 그래프 · 우리 반 순위 · 전체 TOP 20
+   - 이름 있는 기록(sessions): 우리 반 것만 받아 옴 → 우리 반 순위(이름 표시), 내 평균
+   - 이름 없는 기록(pub): 6개 반 전부 → 반별 평균, 전체 순위(반만 표시)
+   ===================================================================== */
+const CLS_COLOR = { 1:"#2a78d6", 2:"#eb6834", 3:"#1baf7a", 4:"#eda100", 5:"#e87ba4", 6:"#008300" };
+const ME_COLOR = "#1d2321";
+let board = { cls: [], pub: [] }, boardTab = "graph", graphMode = "me", rankDateSel = "";
+const r2 = v => Math.round(v * 100) / 100;
+const fmtDate = d => { const [, m, dd] = d.split("-").map(Number); return `${m}/${dd}`; };
+const fmtDateLong = d => { const [y, m, dd] = d.split("-").map(Number); return `${m}월 ${dd}일(${"일월화수목금토"[new Date(y, m-1, dd).getDay()]})`; };
+
+async function loadBoard() {
+  if (!me) return;
+  try {
+    if (!Object.keys(classNames).length) await loadClassNames();
+    const [cls, pub] = await Promise.all([store.getClassSessions(me.cls), store.getPub()]);
+    board = { cls: cls.filter(s => s.count > 0), pub: pub.filter(p => p.count > 0) };
+    drawBoard();
+  } catch (e) { console.error(e); $("chartNote").textContent = "기록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요."; }
+}
+let boardTimer = null;
+function boardSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(loadBoard, 1500); }
+$("refreshBtn").onclick = () => { loadBoard(); toast("최신 기록으로 바꿨어요."); };
+setInterval(() => { if (!$("vStudent").classList.contains("hidden") && !document.hidden) loadBoard(); }, 30000);
+
+$("boardTabs").onclick = e => {
+  const t = e.target.dataset.t; if (!t) return;
+  boardTab = t;
+  $("boardTabs").querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  drawBoard();
+};
+$("graphMode").onclick = e => {
+  const g = e.target.dataset.g; if (!g) return;
+  graphMode = g;
+  $("graphMode").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.g === g));
+  drawBoard();
+};
+$("rankDate").onchange = e => { rankDateSel = e.target.value; drawBoard(); };
+
+/* 반별·날짜별 평균 = 그날 그 반이 쏜 모든 화살의 점수 합 ÷ 화살 수 */
+function classDaily() {
+  const m = {};   // m[date][cls] = {total, count, people}
+  board.pub.forEach(p => {
+    const d = (m[p.date] ||= {}), c = (d[p.cls] ||= { total: 0, count: 0, people: 0 });
+    c.total += p.total; c.count += p.count; c.people++;
+  });
+  return m;
+}
+function myDaily() {
+  const m = {};
+  board.cls.filter(s => s.sid === me.sid).forEach(s => m[s.date] = s.avg);
+  return m;
+}
+
+function drawBoard() {
+  $("tabGraph").classList.toggle("hidden", boardTab !== "graph");
+  $("tabRank").classList.toggle("hidden", boardTab === "graph");
+  if (boardTab === "graph") drawGraph(); else drawRank();
+}
+
+/* ---------- 꺾은선 그래프 (손으로 그린 SVG) ---------- */
+function graphSeries() {
+  const cd = classDaily(), md = myDaily();
+  const dates = Object.keys(cd).concat(Object.keys(md)).filter((d, i, a) => a.indexOf(d) === i).sort();
+  const clsSeries = c => ({ key: "c" + c, name: `${c}반${c === me.cls ? " (우리 반)" : ""}`, color: CLS_COLOR[c], mine: c === me.cls,
+    values: dates.map(d => cd[d]?.[c]?.count ? r2(cd[d][c].total / cd[d][c].count) : null) });
+  let series;
+  if (graphMode === "me") {
+    series = [clsSeries(me.cls), { key: "me", name: "나", color: ME_COLOR, me: true, values: dates.map(d => md[d] ?? null) }];
+    series[0].name = "우리 반 평균";
+  } else series = CLASSES.map(clsSeries);
+  return { dates, series };
+}
+
+function drawGraph() {
+  const { dates, series } = graphSeries();
+  const ok = renderChart({ svg: $("chart"), tip: $("tip"), legend: $("legend"), table: $("chartTable"), note: $("chartNote"), labels: graphMode === "me", boldMine: graphMode === "cls" }, dates, series);
+  if (!ok) return;
+  const last = dates.length - 1, mine = series.find(s => s.me), cls = series.find(s => s.mine);
+  $("chartNote").textContent = graphMode === "me" && mine?.values[last] != null && cls?.values[last] != null
+    ? `${fmtDateLong(dates[last])}: 나 ${mine.values[last].toFixed(2)}점 · 우리 반 ${cls.values[last].toFixed(2)}점 (한 발 평균)`
+    : "점수는 모두 한 발 평균이에요. 그래프를 누르면 그날 값이 나와요.";
+}
+
+/* 꺾은선 그래프 그리기 (학생·선생님 화면 공용) */
+function renderChart(ui, dates, series) {
+  ui.legend.innerHTML = series.map(s =>
+    `<span><i class="${s.me ? "dot" : ""}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("");
+  const svg = ui.svg, W = Math.max(280, svg.clientWidth || 320), H = 240;
+  const pad = { l: 30, r: ui.labels ? 54 : 14, t: 14, b: 26 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const all = series.flatMap(s => s.values).filter(v => v != null);
+  if (!dates.length || !all.length) {
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#6b726d" font-size="14">아직 기록이 없어요. 화살을 기록하면 그래프가 생겨요.</text>`;
+    ui.note.textContent = ""; ui.table.innerHTML = ""; return false;
+  }
+  const yMin = Math.max(0, Math.floor(Math.min(...all)) - 1), yMax = 10;
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const X = i => pad.l + (dates.length === 1 ? iw / 2 : i * iw / (dates.length - 1));
+  const Y = v => pad.t + (yMax - v) / (yMax - yMin) * ih;
+  let g = "";
+  const step = (yMax - yMin) > 6 ? 2 : 1;
+  for (let v = yMin; v <= yMax; v += step)
+    g += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e9e4d8" stroke-width="1"/>` +
+         `<text x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#6b726d">${v}</text>`;
+  const every = Math.ceil(dates.length / Math.max(2, Math.floor(iw / 44)));
+  dates.forEach((d, i) => { if (i % every === 0 || i === dates.length - 1)
+    g += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6b726d">${fmtDate(d)}</text>`; });
+  // 내 반(또는 나)을 맨 위에 그리도록 순서 조정
+  const order = [...series].sort((a, b) => (a.mine || a.me ? 1 : 0) - (b.mine || b.me ? 1 : 0));
+  order.forEach(s => {
+    const bold = s.me || (ui.boldMine && s.mine);
+    let path = "", pen = false;
+    s.values.forEach((v, i) => { if (v == null) { pen = false; return; } path += `${pen ? "L" : "M"}${X(i)} ${Y(v)}`; pen = true; });
+    g += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${bold ? 2.5 : 2}" stroke-linejoin="round" stroke-linecap="round" opacity="${ui.boldMine && !s.mine ? .85 : 1}"/>`;
+    s.values.forEach((v, i) => { if (v != null)
+      g += `<circle cx="${X(i)}" cy="${Y(v)}" r="${bold ? 4.5 : 3.5}" fill="${s.color}" stroke="#fffdf8" stroke-width="2"/>`; });
+  });
+  if (ui.labels) {   // 선 끝에 이름 붙이기 (두 이름이 겹치면 위아래로 벌림)
+    const labs = series.map(s => {
+      const li = s.values.map((v, i) => v == null ? -1 : i).filter(i => i >= 0).pop();
+      return li === undefined ? null : { x: X(li) + 9, y: Y(s.values[li]) + 4, t: s.me ? "나" : "우리 반", c: s.color };
+    }).filter(Boolean);
+    if (labs.length === 2 && Math.abs(labs[0].y - labs[1].y) < 15) {
+      const [hi, lo] = labs[0].y <= labs[1].y ? labs : [labs[1], labs[0]];
+      const mid = (hi.y + lo.y) / 2; hi.y = mid - 8; lo.y = mid + 8;
+    }
+    labs.forEach(l => g += `<text x="${l.x}" y="${l.y}" font-size="12" font-weight="700" fill="#1d2321">${l.t}</text>`);
+  }
+  g += `<line id="cross" y1="${pad.t}" y2="${pad.t + ih}" stroke="#9aa09b" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>`;
+  g += `<rect x="${pad.l - 10}" y="0" width="${iw + 20}" height="${H}" fill="transparent" id="hit"/>`;
+  svg.innerHTML = g;
+
+  // 마우스를 올리거나 손가락으로 누르면 그날 값 보여 주기
+  const tip = ui.tip, cross = svg.querySelector("#cross");
+  const showAt = clientX => {
+    const b = svg.getBoundingClientRect(), x = (clientX - b.left) * W / b.width;
+    let i = dates.length === 1 ? 0 : Math.round((x - pad.l) / iw * (dates.length - 1));
+    i = Math.max(0, Math.min(dates.length - 1, i));
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
+    const rows = series.map(s => ({ s, v: s.values[i] })).filter(r => r.v != null).sort((a, b) => b.v - a.v);
+    tip.innerHTML = `<b>${fmtDateLong(dates[i])}</b>` + (rows.length ? rows.map(r =>
+      `<div><span><i style="background:${r.s.color}"></i>${esc(r.s.name)}</span><span class="num">${r.v.toFixed(2)}</span></div>`).join("") : `<div>기록 없음</div>`);
+    tip.classList.remove("hidden");
+    const px = X(i) * b.width / W, tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(b.width - tw, px + (px > b.width / 2 ? -tw - 12 : 12))) + "px";
+  };
+  const hide = () => { tip.classList.add("hidden"); cross.setAttribute("visibility", "hidden"); };
+  svg.onpointermove = e => showAt(e.clientX);
+  svg.onpointerdown = e => showAt(e.clientX);
+  svg.onpointerleave = hide;
+
+  ui.table.innerHTML = `<table><thead><tr><th>날짜</th>${series.map(s => `<th>${esc(s.name)}</th>`).join("")}</tr></thead><tbody>` +
+    dates.map((d, i) => `<tr><td>${fmtDate(d)}</td>${series.map(s => `<td class="num">${s.values[i] == null ? "–" : s.values[i].toFixed(2)}</td>`).join("")}</tr>`).reverse().join("") +
+    `</tbody></table>`;
+  return true;
+}
+window.addEventListener("resize", () => { if (me && boardTab === "graph" && !$("vStudent").classList.contains("hidden")) drawGraph(); });
+
+/* ---------- 순위: 그날 한 발 평균이 높은 순 (같으면 합계, 그다음 X 개수) ---------- */
+const rankSort = (a, b) => b.avg - a.avg || b.total - a.total || (b.xs || 0) - (a.xs || 0);
+function withRank(list) {
+  let prev = null, rank = 0;
+  return list.sort(rankSort).map((x, i) => {
+    if (!prev || rankSort(prev, x) !== 0) rank = i + 1;
+    prev = x; return { ...x, rank };
+  });
+}
+const medal = r => r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : r;
+
+function drawRank() {
+  const dates = [...new Set(board.pub.map(p => p.date).concat(board.cls.map(s => s.date)))].sort().reverse();
+  if (!dates.length) { $("rankDate").innerHTML = ""; $("rankTitle").textContent = ""; $("rankBox").innerHTML = `<p class="small center">아직 기록이 없어요.</p>`; return; }
+  if (!dates.includes(rankDateSel)) rankDateSel = dates.includes(today) ? today : dates[0];
+  $("rankDate").innerHTML = dates.map(d => `<option value="${d}" ${d === rankDateSel ? "selected" : ""}>${fmtDateLong(d)}${d === today ? " · 오늘" : ""}</option>`).join("");
+  const day = rankDateSel;
+
+  if (boardTab === "class") {
+    $("rankTitle").textContent = `${me.cls}반 순위 · 한 발 평균`;
+    const list = withRank(board.cls.filter(s => s.date === day));
+    $("rankBox").innerHTML = list.length ? `<table class="rk"><thead><tr><th>순위</th><th>이름</th><th>발</th><th>합계</th><th>평균</th></tr></thead><tbody>` +
+      list.map(s => `<tr class="${s.sid === me.sid ? "mine" : ""}"><td class="medal">${medal(s.rank)}</td><td data-sid="${esc(s.sid)}">${esc(rosterName(s.sid))}${s.sid === me.sid ? " (나)" : ""}</td>
+        <td class="num">${s.count}</td><td class="num">${s.total}</td><td class="num"><b>${s.avg.toFixed(2)}</b></td></tr>`).join("") + `</tbody></table>`
+      : `<p class="small center">이날 우리 반 기록이 없어요.</p>`;
+  } else {
+    $("rankTitle").textContent = `전체 TOP 20 · 이름 대신 반만 보여요`;
+    const ranked = withRank(board.pub.filter(p => p.date === day));
+    const list = ranked.filter(p => p.rank <= 20);
+    const myKey = `${day}_${me.anon}`, myRow = ranked.find(p => p.id === myKey);
+    $("rankTitle").innerHTML = `이름 대신 반만 보여요` + (myRow ? `<br><b style="color:var(--ink)">나는 ${ranked.length}명 중 ${myRow.rank}등</b>` : "");
+    const cd = classDaily()[day] || {};
+    const clsRows = CLASSES.map(c => ({ c, ...(cd[c] || { total: 0, count: 0, people: 0 }) }))
+      .map(r => ({ ...r, avg: r.count ? r.total / r.count : null }))
+      .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+    $("rankBox").innerHTML = (list.length ? `<table class="rk"><thead><tr><th>순위</th><th>반</th><th>발</th><th>평균</th></tr></thead><tbody>` +
+      list.map(p => `<tr class="${p.id === myKey ? "mine" : ""}"><td class="medal">${medal(p.rank)}</td>
+        <td><span class="cls-dot" style="background:${CLS_COLOR[p.cls]}"></span>${p.cls}반${p.id === myKey ? " (나)" : ""}</td>
+        <td class="num">${p.count}</td><td class="num"><b>${p.avg.toFixed(2)}</b></td></tr>`).join("") + `</tbody></table>`
+      : `<p class="small center">이날 기록이 없어요.</p>`) +
+      `<div class="sec-title">반별 평균 (${fmtDateLong(day)})</div>
+       <table class="rk"><thead><tr><th>반</th><th>참여</th><th>화살</th><th>평균</th></tr></thead><tbody>` +
+      clsRows.map(r => `<tr class="${r.c === me.cls ? "mine" : ""}"><td><span class="cls-dot" style="background:${CLS_COLOR[r.c]}"></span>${r.c}반</td>
+        <td class="num">${r.people}명</td><td class="num">${r.count}</td><td class="num"><b>${r.avg == null ? "–" : r.avg.toFixed(2)}</b></td></tr>`).join("") + `</tbody></table>`;
+  }
+}
+
+/* 우리 반 이름표: 처음 한 번 우리 반 명단을 받아 둠 */
+let classNames = {};
+function rosterName(sid) { return classNames[sid] || sid; }
+async function loadClassNames() {
+  try { (await store.listClassNames(me.cls)).forEach(s => classNames[s.sid] = s.name); } catch (e) { console.error(e); }
+}
+
+/* ---------- 선생님 ---------- */
+$("teacherLoginBtn").onclick = async () => {
+  try { await store.teacherLogin(); }
+  catch (e) { if (e.code !== "auth/popup-closed-by-user") toast("구글 로그인에 실패했어요: " + (e.code || e.message)); }
+};
+$("tLogout").onclick = () => store.logout();
+$("ntLogout").onclick = () => store.logout();
+
+let curClass = 1, tPane = "rec";
+function openTeacher(email) {
+  $("tEmail").textContent = email + (DEMO ? " (미리보기)" : "");
+  drawRosterTabs();
+  show("vTeacher");
+  setPane(tPane);
+}
+function drawRosterTabs() {
+  $("classTabs").innerHTML = CLASSES.map(c => `<button class="chip ${c===curClass?"on":""}" data-c="${c}">${c}반</button>`).join("");
+}
+$("classTabs").onclick = e => { const c = e.target.dataset.c; if (!c) return; curClass = +c; drawRosterTabs(); loadRoster(); };
+$("tTabs").onclick = e => { const p = e.target.dataset.p; if (p) setPane(p); };
+function setPane(p) {
+  tPane = p;
+  $("tTabs").querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.p === p));
+  $("pRec").classList.toggle("hidden", p !== "rec");
+  $("pAvg").classList.toggle("hidden", p !== "avg");
+  $("pRoster").classList.toggle("hidden", p !== "roster");
+  $("pPaste").classList.toggle("hidden", p !== "roster");
+  if (p === "roster") loadRoster(); else loadTeacherData();
+}
+
+/* ---------- 선생님: 전체 기록 ---------- */
+let T = { students: {}, sessions: [] }, tDateSel = "", tClassSel = 0;
+async function loadTeacherData() {
+  $("tRecBox").innerHTML = `<div class="loading">기록 불러오는 중…</div>`;
+  try {
+    const [stu, ses] = await Promise.all([store.listAllStudents(), store.getAllSessions()]);
+    T.students = {}; stu.forEach(s => T.students[s.sid] = s);
+    T.sessions = ses.map(x => ({ ...x, arrows: (x.arrows || []).map(norm) }));
+    drawTeacher();
+  } catch (e) { console.error(e); $("tRecBox").innerHTML = `<p class="err">기록을 불러오지 못했어요. (${esc(e.code || e.message)})</p>`; }
+}
+$("tRefresh").onclick = () => { loadTeacherData(); toast("최신 기록으로 바꿨어요."); };
+$("tDate").onchange = e => { tDateSel = e.target.value; drawTeacher(); };
+$("tClassTabs").onclick = e => { const c = e.target.dataset.c; if (c === undefined) return; tClassSel = +c; drawTeacher(); };
+
+function drawTeacher() { if (tPane === "rec") drawTeacherRec(); else if (tPane === "avg") drawTeacherAvg(); }
+
+function drawTeacherRec() {
+  const today0 = todayKST();
+  const dates = [...new Set(T.sessions.map(s => s.date))].sort().reverse();
+  if (!dates.includes(tDateSel)) tDateSel = dates.includes(today0) ? today0 : (dates[0] || today0);
+  if (!dates.includes(tDateSel)) dates.unshift(tDateSel);
+  $("tDate").innerHTML = dates.map(d => `<option value="${d}" ${d === tDateSel ? "selected" : ""}>${fmtDateLong(d)}${d === today0 ? " · 오늘" : ""}</option>`).join("");
+  $("tClassTabs").innerHTML = [0, ...CLASSES].map(c => `<button class="chip ${c === tClassSel ? "on" : ""}" data-c="${c}">${c ? c + "반" : "전체"}</button>`).join("");
+  const day = T.sessions.filter(s => s.date === tDateSel && s.count > 0);
+  // 반별 순위를 먼저 매김
+  const rankIn = {};
+  CLASSES.forEach(c => withRank(day.filter(s => s.cls === c)).forEach(s => rankIn[s.sid] = s.rank));
+  const allRank = {}; withRank(day.map(s => ({ ...s }))).forEach(s => allRank[s.sid] = s.rank);
+  const roster = Object.values(T.students).filter(s => !tClassSel || s.cls === tClassSel).sort((a, b) => a.sid.localeCompare(b.sid));
+  const bySid = {}; T.sessions.filter(s => s.date === tDateSel).forEach(s => bySid[s.sid] = s);
+  const done = roster.filter(s => bySid[s.sid]?.count > 0);
+  const tot = done.reduce((a, s) => a + bySid[s.sid].total, 0), cnt = done.reduce((a, s) => a + bySid[s.sid].count, 0);
+  $("tRecSum").innerHTML = `${tClassSel ? tClassSel + "반" : "전체"} ${roster.length}명 중 <b>${done.length}명</b> 기록 · 화살 ${cnt}발 · 한 발 평균 <b>${cnt ? (tot / cnt).toFixed(2) : "–"}</b>`;
+  if (!roster.length) { $("tRecBox").innerHTML = `<p class="small center">명단이 없어요. [명단·비밀번호] 탭에서 명단을 먼저 넣어 주세요.</p>`; return; }
+  $("tRecBox").innerHTML = `<table class="rk tbl-s"><thead><tr><th>학번</th><th>이름</th><th>발</th><th>합계</th><th>X</th><th>평균</th><th>반 순위</th><th>전체</th><th>점수</th><th></th></tr></thead><tbody>` +
+    roster.map(st => {
+      const r = bySid[st.sid];
+      if (!r || !r.count) return `<tr><td>${esc(st.sid)}</td><td>${esc(st.name)}</td><td colspan="7" class="small">기록 없음</td><td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">입력</button></td></tr>`;
+      return `<tr><td>${esc(st.sid)}</td><td>${esc(st.name)}</td><td class="num">${r.count}</td><td class="num">${r.total}</td><td class="num">${r.xs || 0}</td>
+        <td class="num"><b>${r.avg.toFixed(2)}</b></td><td class="num">${rankIn[st.sid] ?? "–"}</td><td class="num">${allRank[st.sid] ?? "–"}</td>
+        <td class="scores">${r.arrows.map(a => a.k).join(" ")}</td>
+        <td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">고치기</button></td></tr>`;
+    }).join("") + `</tbody></table>`;
+}
+$("tRecBox").onclick = e => { const sid = e.target.dataset.ed; if (sid) openEditor(sid); };
+
+function teacherDaily() {   // 날짜·반별 평균 (선생님은 이름 있는 기록을 모두 볼 수 있음)
+  const m = {};
+  T.sessions.filter(s => s.count > 0).forEach(s => {
+    const c = ((m[s.date] ||= {})[s.cls] ||= { total: 0, count: 0, people: 0 });
+    c.total += s.total; c.count += s.count; c.people++;
+  });
+  return m;
+}
+function drawTeacherAvg() {
+  const m = teacherDaily(), dates = Object.keys(m).sort();
+  const series = CLASSES.map(c => ({ key: "c" + c, name: `${c}반`, color: CLS_COLOR[c],
+    values: dates.map(d => m[d][c]?.count ? r2(m[d][c].total / m[d][c].count) : null) }));
+  renderChart({ svg: $("tChart"), tip: $("tTip"), legend: $("tLegend"), table: document.createElement("div"), note: $("tChartNote"), labels: false, boldMine: false }, dates, series);
+  $("tChartNote").textContent = dates.length ? "그래프를 누르면 그날 반별 값이 나와요." : "";
+  $("tAvgTable").innerHTML = dates.length ? `<table class="rk tbl-s"><thead><tr><th>날짜</th>${CLASSES.map(c => `<th><span class="cls-dot" style="background:${CLS_COLOR[c]}"></span>${c}반</th>`).join("")}<th>전체</th></tr></thead><tbody>` +
+    [...dates].reverse().map(d => {
+      const all = Object.values(m[d]).reduce((a, x) => ({ t: a.t + x.total, n: a.n + x.count }), { t: 0, n: 0 });
+      return `<tr><td>${fmtDateLong(d)}</td>${CLASSES.map(c => { const x = m[d][c];
+        return `<td class="num">${x?.count ? `<b>${(x.total / x.count).toFixed(2)}</b><div class="small">${x.people}명</div>` : "–"}</td>`; }).join("")}
+        <td class="num"><b>${all.n ? (all.t / all.n).toFixed(2) : "–"}</b></td></tr>`; }).join("") + `</tbody></table>` : `<p class="small center">아직 기록이 없어요.</p>`;
+}
+window.addEventListener("resize", () => { if (tPane === "avg" && !$("vTeacher").classList.contains("hidden")) drawTeacherAvg(); });
+
+/* ---------- 선생님: 기록 고치기 창 ---------- */
+let ED = null;   // { stu, date, arrows, sel }
+$("edTgt").innerHTML = `<g>${$("tgt").querySelector("#face").innerHTML}</g><g id="edMarks"></g>`;
+$("edPad").innerHTML = ["X","10","9","8","7","6","5","4","3","2","1","M"].map(k => `<button class="z-${zone(k)}" data-k="${k}">${k}</button>`).join("");
+function openEditor(sid) {
+  const stu = T.students[sid], rec = T.sessions.find(s => s.sid === sid && s.date === tDateSel);
+  ED = { stu, date: tDateSel, arrows: rec ? rec.arrows.map(a => ({ ...a })) : [], sel: -1, exists: !!rec };
+  $("edTitle").textContent = `${stu.name} (${stu.sid})`;
+  $("edSub").textContent = `${fmtDateLong(tDateSel)} 기록`;
+  $("edDelAll").classList.remove("armed"); $("edDelAll").textContent = "이 기록 전체 삭제";
+  $("edDelAll").disabled = !ED.exists;
+  $("edModal").classList.remove("hidden");
+  drawEditor();
+}
+function drawEditor() {
+  const a = ED.arrows;
+  let h = "";
+  for (let e = 0; e < Math.max(1, Math.ceil(a.length / PER_END)); e++) {
+    h += `<div class="end"><span class="lab">${e+1}엔드</span>`;
+    for (let j = 0; j < PER_END; j++) { const i = e * PER_END + j, x = a[i];
+      h += x ? `<button class="ar z-${zone(x.k)} ${i === ED.sel ? "sel" : ""}" data-i="${i}">${x.k}</button>` : `<span class="ar empty"></span>`; }
+    h += `</div>`;
+  }
+  $("edArrows").innerHTML = h;
+  $("edMarks").innerHTML = a.map((x, i) => x.x === undefined ? "" : xMark(x.x, x.y, { color: i === ED.sel ? "#e6007e" : "#111", size: i === ED.sel ? 0.07 : 0.05 })).join("");
+  const t = a.reduce((s, x) => s + pts(x.k), 0);
+  $("edSub").textContent = `${fmtDateLong(ED.date)} · ${a.length}발 · 합계 ${t} · 평균 ${a.length ? (t / a.length).toFixed(2) : "–"}`;
+  $("edHint").textContent = ED.sel >= 0 ? `${ED.sel + 1}번째 화살 → 새 점수를 고르세요.` : "고칠 화살을 누르세요. [화살 추가]를 누르고 점수를 고르면 새 화살이 들어가요.";
+}
+$("edArrows").onclick = e => { const i = e.target.dataset.i; if (i === undefined) return; ED.sel = ED.sel === +i ? -1 : +i; drawEditor(); };
+$("edPad").onclick = e => {
+  const k = e.target.dataset.k; if (!k) return;
+  if (ED.sel === -2) { if (ED.arrows.length >= MAX_ARROWS) return toast("30발까지만 넣을 수 있어요."); ED.arrows.push({ k }); }
+  else if (ED.sel >= 0) { ED.arrows[ED.sel] = { k }; }   // 선생님이 점수를 고치면 과녁 위치는 지움
+  else return toast("먼저 고칠 화살을 누르거나 [화살 추가]를 누르세요.");
+  ED.sel = -1; drawEditor();
+};
+$("edAdd").onclick = () => { ED.sel = -2; $("edHint").textContent = "새로 넣을 화살의 점수를 고르세요."; };
+$("edDelArrow").onclick = () => { if (ED.sel < 0) return toast("지울 화살을 먼저 누르세요."); ED.arrows.splice(ED.sel, 1); ED.sel = -1; drawEditor(); };
+$("edClose").onclick = () => { $("edModal").classList.add("hidden"); ED = null; };
+$("edSave").onclick = async () => {
+  const a = ED.arrows, total = a.reduce((s, x) => s + pts(x.k), 0);
+  try {
+    if (!a.length) { if (ED.exists) await store.deleteSession(ED.stu, ED.date); }
+    else await store.saveSession(ED.stu, { date: ED.date, arrows: a, count: a.length, total,
+      xs: a.filter(x => x.k === "X").length, avg: Math.round(total / a.length * 100) / 100 });
+    toast("저장했어요."); $("edModal").classList.add("hidden"); ED = null; loadTeacherData();
+  } catch (e) { console.error(e); toast("저장하지 못했어요: " + (e.code || e.message)); }
+};
+$("edDelAll").onclick = async () => {
+  const b = $("edDelAll");
+  if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "한 번 더 누르면 삭제"; return; }
+  try { await store.deleteSession(ED.stu, ED.date); toast("기록을 지웠어요."); $("edModal").classList.add("hidden"); ED = null; loadTeacherData(); }
+  catch (e) { console.error(e); toast("지우지 못했어요: " + (e.code || e.message)); }
+};
+
+/* ---------- 엑셀(CSV) 내려받기: 모든 날짜·모든 학생 ---------- */
+$("csvBtn").onclick = () => {
+  const rows = [["날짜", "반", "번호", "학번", "이름", "발수", "합계", "X개수", "한발평균", ...Array.from({ length: MAX_ARROWS }, (_, i) => `${i + 1}발`)]];
+  [...T.sessions].filter(s => s.count > 0)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.sid.localeCompare(b.sid))
+    .forEach(s => { const st = T.students[s.sid] || {};
+      rows.push([s.date, s.cls, st.no ?? "", s.sid, st.name ?? "", s.count, s.total, s.xs || 0, s.avg, ...s.arrows.map(a => a.k)]); });
+  if (rows.length === 1) return toast("내려받을 기록이 아직 없어요.");
+  const csv = "﻿" + rows.map(r => r.map(v => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; }).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a"); a.href = url; a.download = `양궁기록_${todayKST()}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
+async function loadRoster() {
+  $("rosterBox").innerHTML = `<div class="loading">명단 불러오는 중…</div>`;
+  try {
+    const list = await store.listClass(curClass);
+    if (!list.length) { $("rosterBox").innerHTML = `<p class="small center">${curClass}반 명단이 아직 없어요. 아래에 명단을 붙여넣어 주세요.</p>`; return; }
+    $("rosterBox").innerHTML = `
+      <div class="small">${curClass}반 · ${list.length}명 — 비밀번호를 바꾸려면 칸을 고치고 [저장]을 누르세요.</div>
+      <table><thead><tr><th>번호</th><th>학번</th><th>이름</th><th>비밀번호</th><th></th></tr></thead><tbody>
+      ${list.map(s => `<tr><td>${s.no}</td><td>${esc(s.sid)}</td><td>${esc(s.name)}</td>
+        <td><input data-sid="${esc(s.sid)}" value="${esc(s.pin)}" maxlength="4" inputmode="numeric"></td>
+        <td><button class="mini save" data-save="${esc(s.sid)}">저장</button></td></tr>`).join("")}
+      </tbody></table>`;
+    $("rosterBox").onclick = async e => {
+      const sid = e.target.dataset.save; if (!sid) return;
+      const v = $("rosterBox").querySelector(`input[data-sid="${sid}"]`).value.trim();
+      if (!/^\d{4}$/.test(v)) return toast("비밀번호는 숫자 4자리로 적어 주세요.");
+      await store.savePin(sid, v);
+      toast(`${sid} 비밀번호를 ${v}(으)로 바꿨어요.`);
+    };
+  } catch (e) { console.error(e); $("rosterBox").innerHTML = `<p class="err">명단을 불러오지 못했어요. (${esc(e.code||e.message)})</p>`; }
+}
+
+/* 엑셀에서 붙여넣은 명단 읽기: 한 줄에 학번(3xxx) · 이름(한글) · 비밀번호(4자리)가 있으면 됨 */
+$("pasteBtn").onclick = async () => {
+  const lines = $("pasteBox").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const rows = [], bad = [];
+  for (const l of lines) {
+    const t = l.split(/\t|,|\s+/).filter(Boolean);
+    const sid = t.find(x => /^3[1-6]\d{2}$/.test(x));
+    const name = t.find(x => /[가-힣]/.test(x));
+    const pin = [...t].reverse().find(x => /^\d{4}$/.test(x) && x !== sid);
+    if (sid && name && pin) rows.push({ sid, name, pin, cls: +sid[1], no: +sid.slice(2) });
+    else if (!/학번|이름|성명/.test(l)) bad.push(l);
+  }
+  if (!rows.length) return $("pasteMsg").textContent = "읽을 수 있는 줄이 없어요. 학번·이름·비밀번호가 들어 있는지 확인해 주세요.";
+  $("pasteBtn").disabled = true;
+  try {
+    await store.saveRoster(rows);
+    $("pasteMsg").innerHTML = `<span class="ok">${rows.length}명을 저장했어요.</span>` + (bad.length ? ` 읽지 못한 줄 ${bad.length}개: ${esc(bad.slice(0,3).join(" / "))}` : "");
+    $("pasteBox").value = "";
+    loadRoster();
+  } catch (e) { console.error(e); $("pasteMsg").textContent = "저장하지 못했어요: " + (e.code || e.message); }
+  finally { $("pasteBtn").disabled = false; }
+};
+
+/* ---------- 시작 ---------- */
+if (DEMO) $("demoBar").classList.remove("hidden");
+try { store = DEMO ? makeDemoStore() : await makeFirebaseStore(); store.onChange(route); }
+catch (e) { console.error(e); $("vLoading").textContent = "인터넷 연결을 확인해 주세요."; }
+</script>
+</body>
+</html>
