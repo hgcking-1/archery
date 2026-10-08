@@ -143,7 +143,7 @@
       <button class="btn" id="loginBtn" type="submit">들어가기</button>
       <div class="err" id="loginErr"></div>
     </form>
-    <div class="small center" style="margin-top:14px">기록은 이 컴퓨터의 크롬에 저장돼요.<br>다른 컴퓨터나 다른 브라우저에서는 보이지 않아요.</div>
+    <div class="small center" id="modeNote" style="margin-top:14px"></div>
     <div class="foot"><button class="ghost" id="teacherLoginBtn">선생님 로그인</button></div>
   </section>
 
@@ -281,8 +281,7 @@
     <!-- 백업·합치기 -->
     <div class="card t-pane hidden" id="pBackup" style="margin-top:12px">
       <b>백업 · 합치기</b>
-      <p class="small">기록은 <b>이 컴퓨터의 크롬</b>에만 저장돼요. 크롬의 사이트 데이터를 지우면 기록도 사라지니, 수업이 끝날 때마다 파일로 받아 두세요.
-      다른 컴퓨터의 기록을 한곳에 모을 때도 이 파일을 써요.</p>
+      <p class="small" id="bkIntro"></p>
       <button class="btn save" id="bkExport">⬇ 전체 백업 파일 받기 (.json)</button>
       <label for="bkFile">백업 파일 불러와 합치기</label>
       <input id="bkFile" type="file" accept=".json,application/json">
@@ -321,8 +320,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="config.js"></script>
 <script type="module">
-/* 서버 없이 크롬 하나로 동작: 모든 기록은 이 컴퓨터의 크롬(localStorage)에 저장돼요. */
+/* 저장 방식 두 가지 (config.js 의 서버 주소로 결정)
+   - 서버 주소가 있으면: 구글 시트(Apps Script)에 저장 → 학생이 각자 기기로 들어와도 기록이 한곳에 모여요.
+   - 비어 있으면: 이 컴퓨터의 크롬(localStorage)에만 저장해요. */
+const SERVER_URL = String(window.ARCHERY_SERVER_URL || "").trim(), REMOTE = !!SERVER_URL;
 const CLASSES = [1,2,3,4,5,6];
 
 const $ = id => document.getElementById(id);
@@ -338,10 +341,11 @@ const pts = k => k === "X" ? 10 : k === "M" ? 0 : Number(k);
 const zone = k => ({X:"gold","10":"gold","9":"gold","8":"red","7":"red","6":"blue","5":"blue","4":"black","3":"black","2":"white","1":"white",M:"miss"})[k];
 
 /* =====================================================================
-   자료 저장소: 이 컴퓨터의 크롬(localStorage)에만 저장함 — 서버·Firebase 없음
+   자료 저장소: makeLocalStore(이 컴퓨터의 크롬) 또는 makeRemoteStore(구글 시트 서버) 중 하나
    화면 코드는 아래 함수들만 사용함
    ===================================================================== */
 let store;
+const codeErr = code => Object.assign(new Error(code), { code });
 
 const SCORE_KEYS = ["X","10","9","8","7","6","5","4","3","2","1","M"];
 const cleanStudent = st => {
@@ -357,6 +361,11 @@ const cleanSession = s => {      // 파일에서 가져온 기록은 형식을 �
   return { sid: s.sid, cls: +s.sid[1], date: s.date, arrows, count: arrows.length, total,
            xs: arrows.filter(a => a.k === "X").length, avg: arrows.length ? Math.round(total / arrows.length * 100) / 100 : 0,
            updatedAt: Number.isFinite(s.updatedAt) ? s.updatedAt : 0 };
+};
+const cleanBackup = obj => {     // 백업 파일 검사 (저장 방식과 상관없이 같은 규칙)
+  if (!obj || obj.app !== "archery" || typeof obj.students !== "object") throw new Error("format");
+  return { students: Object.values(obj.students || {}).map(cleanStudent).filter(Boolean),
+           sessions: Object.values(obj.sessions || {}).map(cleanSession).filter(Boolean) };
 };
 
 function makeLocalStore() {
@@ -385,14 +394,15 @@ function makeLocalStore() {
   const emit = () => cb(cur);
   const wait = () => new Promise(r => setTimeout(r, 250));
   return {
+    mode: "local",
     onChange(f) { cb = f; emit(); },
     async studentLogin(sid, pin) {
       await wait();
-      const s = D().students[sid];
-      if (!s || s.pin !== pin) throw new Error("wrong");
+      const list = D().students, s = list[sid];
+      if (!Object.keys(list).length) throw codeErr("noroster");
+      if (!s || s.pin !== pin) throw codeErr("wrong");
       setCur({ kind: "student", sid });
     },
-    studentCount() { return Object.keys(D().students).length; },
     hasTeacherPw() { return !!D().teacher; },
     async teacherSetup(pw) {
       const salt = randomKey(), hash = await hashPw(pw, salt);
@@ -402,7 +412,7 @@ function makeLocalStore() {
     async teacherLogin(pw) {
       await wait();
       const t = D().teacher;
-      if (!t || await hashPw(pw, t.salt) !== t.hash) throw new Error("wrong");
+      if (!t || await hashPw(pw, t.salt) !== t.hash) throw codeErr("wrong");
       setCur({ kind: "teacher" }); emit();
     },
     async logout() { setCur(null); emit(); },
@@ -413,9 +423,12 @@ function makeLocalStore() {
     async listAllStudents() { return Object.values(D().students).map(({ pin, ...r }) => r); },
     async getAllSessions() { return Object.values(D().sessions); },
     async deleteSession(stu, date) { const d = D(); delete d.sessions[`${stu.sid}_${date}`]; delete d.pub[`${date}_${stu.anon || stu.sid}`]; save(d); },
-    async listClassNames(cls) { return Object.values(D().students).filter(s => s.cls === cls).map(s => ({ sid: s.sid, name: s.name })); },
-    async getClassSessions(cls) { return Object.values(D().sessions).filter(s => s.cls === cls); },
-    async getPub() { return Object.entries(D().pub).map(([id, v]) => ({ id, ...v })); },
+    async getBoard(cls) {       // 우리 반 이름·기록 + 전체 반 평균 자료
+      const d = D();
+      return { names: Object.values(d.students).filter(s => s.cls === cls).map(s => ({ sid: s.sid, name: s.name })),
+               cls: Object.values(d.sessions).filter(s => s.cls === cls),
+               pub: Object.entries(d.pub).map(([id, v]) => ({ id, ...v })) };
+    },
     async getMySessions(stu) { return Object.values(D().sessions).filter(s => s.sid === stu.sid).sort((a, b) => a.date < b.date ? -1 : 1); },
     async getSession(sid, date) { return D().sessions[`${sid}_${date}`] || null; },
     async saveSession(stu, rec) {
@@ -428,14 +441,10 @@ function makeLocalStore() {
     exportAll() { const { teacher, ...rest } = D(); return JSON.stringify({ app: "archery", v: 1, exportedAt: new Date().toISOString(), ...rest }); },
     /* 백업 파일 합치기: 없는 학생·기록은 더하고, 같은 날 기록은 더 나중에 저장한 쪽을 남김 */
     async importMerge(obj) {
-      if (!obj || obj.app !== "archery" || typeof obj.students !== "object") throw new Error("format");
-      const d = D(), n = { students: 0, sessions: 0 };
-      for (const raw of Object.values(obj.students || {})) {
-        const s = cleanStudent(raw);
-        if (s && !d.students[s.sid]) { d.students[s.sid] = s; n.students++; }
-      }
-      for (const raw of Object.values(obj.sessions || {})) {
-        const s = cleanSession(raw), stu = s && d.students[s.sid];
+      const c = cleanBackup(obj), d = D(), n = { students: 0, sessions: 0 };
+      for (const s of c.students) if (!d.students[s.sid]) { d.students[s.sid] = s; n.students++; }
+      for (const s of c.sessions) {
+        const stu = d.students[s.sid];
         if (!stu) continue;
         const key = `${s.sid}_${s.date}`, old = d.sessions[key];
         if (old && !(s.updatedAt > (old.updatedAt || 0) || (s.updatedAt === (old.updatedAt || 0) && s.count > old.count))) continue;
@@ -449,6 +458,59 @@ function makeLocalStore() {
 }
 
 
+/* 구글 시트(Apps Script) 서버와 주고받는 저장소 — apps-script/Code.gs 와 짝이에요.
+   비밀번호 확인·점수 계산은 서버가 하고, 여기서는 요청만 보내요. */
+function makeRemoteStore(url) {
+  const SKEY = "archery-remote";
+  let cb = () => {}, cur = null;
+  try { cur = JSON.parse(sessionStorage.getItem(SKEY)); } catch (e) {}
+  if (cur && !(cur.token && (cur.kind === "teacher" || /^3[1-6]\d{2}$/.test(cur.sid || "")))) cur = null;
+  const setCur = s => { cur = s; try { s ? sessionStorage.setItem(SKEY, JSON.stringify(s)) : sessionStorage.removeItem(SKEY); } catch (e) {} };
+  const emit = () => cb(cur && { kind: cur.kind, sid: cur.sid });
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  async function call(action, args) {
+    const body = JSON.stringify({ action, token: cur && cur.token, ...args });
+    let last;
+    for (let i = 0; i < 3; i++) {            // 여럿이 한꺼번에 눌러 서버가 잠깐 못 받을 때를 대비해 다시 시도
+      let j;
+      try {
+        const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body });
+        j = await res.json();
+      } catch (e) { last = e; await sleep(700 * (i + 1)); continue; }
+      if (j && j.ok) return j.data;
+      const err = codeErr((j && j.code) || "error");
+      if (err.code === "auth" && cur) { setCur(null); emit(); }
+      throw err;
+    }
+    throw last;
+  }
+  return {
+    mode: "remote",
+    onChange(f) { cb = f; emit(); },
+    async studentLogin(sid, pin) { const d = await call("studentLogin", { sid, pin }); setCur({ kind: "student", sid: d.sid, token: d.token }); },
+    hasTeacherPw() { return true; },          // 선생님 비밀번호는 서버 코드(Code.gs)에서 정해요
+    async teacherSetup() { throw codeErr("unsupported"); },
+    async teacherLogin(pw) { const d = await call("teacherLogin", { pw }); setCur({ kind: "teacher", sid: "", token: d.token }); emit(); },
+    async logout() { setCur(null); emit(); },
+    getStudent: () => call("me"),
+    getBoard: () => call("board"),
+    getMySessions: () => call("mySessions"),
+    getSession: (sid, date) => call("getSession", { date }),
+    async saveSession(stu, rec) {
+      const r = { date: rec.date, arrows: rec.arrows };
+      await call(cur && cur.kind === "teacher" ? "teacherSaveSession" : "saveSession", cur && cur.kind === "teacher" ? { sid: stu.sid, rec: r } : { rec: r });
+    },
+    async listClass(cls) { return (await call("listStudents")).filter(s => s.cls === cls).sort((a, b) => a.no - b.no); },
+    async listAllStudents() { return (await call("listStudents")).map(({ pin, ...r }) => r); },
+    getAllSessions: () => call("allSessions"),
+    savePin: (sid, pin) => call("savePin", { sid, pin }),
+    async saveRoster(rows) { for (let i = 0; i < rows.length; i += 100) await call("saveRoster", { rows: rows.slice(i, i + 100) }); },
+    deleteSession: (stu, date) => call("deleteSession", { sid: stu.sid, date }),
+    async exportAll() { const d = await call("exportAll"); return JSON.stringify({ app: "archery", v: 1, exportedAt: new Date().toISOString(), ...d }); },
+    async importMerge(obj) { return call("importMerge", cleanBackup(obj)); }
+  };
+}
+
 /* ---------- 화면 전환: 누가 로그인했는지에 따라 ---------- */
 let loggingIn = false;
 async function route(session) {
@@ -458,6 +520,15 @@ async function route(session) {
   if (session.kind === "teacher") { app$.classList.add("wide"); openTeacher(); return; }
   try { await openStudent(session.sid); } catch (e) { console.error(e); store.logout(); }
 }
+
+/* 서버·저장소가 돌려준 오류 코드를 학생·선생님이 읽을 말로 바꿈 */
+const errMsg = (e, wrong) => ({
+  wrong,
+  noroster: "아직 명단이 없어요. 선생님이 먼저 [선생님 로그인]에서 명단을 넣어야 해요.",
+  locked: "여러 번 틀려서 잠겼어요. 10분 뒤에 다시 해 보세요.",
+  unconfigured: "서버 코드(Code.gs)의 TEACHER_PASSWORD를 먼저 바꿔 주세요.",
+  auth: "로그인이 풀렸어요. 다시 로그인해 주세요."
+})[e && e.code] || (REMOTE ? "서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 보세요." : "처리하지 못했어요.");
 
 /* ---------- 학생 로그인 ---------- */
 $("sid").addEventListener("input", e => e.target.value = e.target.value.replace(/\D/g,""));
@@ -477,8 +548,7 @@ $("loginForm").addEventListener("submit", async e => {
     await openStudent(sid);
   } catch (err) {
     console.warn(err);
-    $("loginErr").textContent = store.studentCount() ? "학번이나 비밀번호가 맞지 않아요."
-      : "아직 명단이 없어요. 선생님이 먼저 [선생님 로그인]에서 명단을 넣어야 해요.";
+    $("loginErr").textContent = errMsg(err, "학번이나 비밀번호가 맞지 않아요.");
     show("vLogin");
   } finally {
     loggingIn = false;
@@ -691,16 +761,16 @@ const fmtDateLong = d => { const [y, m, dd] = d.split("-").map(Number); return `
 async function loadBoard() {
   if (!me) return;
   try {
-    if (!Object.keys(classNames).length) await loadClassNames();
-    const [cls, pub] = await Promise.all([store.getClassSessions(me.cls), store.getPub()]);
-    board = { cls: cls.filter(s => s.count > 0), pub: pub.filter(p => p.count > 0) };
+    const b = await store.getBoard(me.cls);
+    b.names.forEach(s => classNames[s.sid] = s.name);
+    board = { cls: b.cls.filter(s => s.count > 0), pub: b.pub.filter(p => p.count > 0) };
     drawBoard();
   } catch (e) { console.error(e); $("chartNote").textContent = "기록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요."; }
 }
 let boardTimer = null;
-function boardSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(loadBoard, 1500); }
+function boardSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(loadBoard, REMOTE ? 8000 : 1500); }   // 서버를 쓸 때는 덜 자주 불러 와요
 $("refreshBtn").onclick = () => { loadBoard(); toast("최신 기록으로 바꿨어요."); };
-setInterval(() => { if (!$("vStudent").classList.contains("hidden") && !document.hidden) loadBoard(); }, 30000);
+setInterval(() => { if (!$("vStudent").classList.contains("hidden") && !document.hidden) loadBoard(); }, REMOTE ? 90000 : 30000);
 
 $("boardTabs").onclick = e => {
   const t = e.target.dataset.t; if (!t) return;
@@ -886,14 +956,11 @@ function drawRank() {
 /* 우리 반 이름표: 처음 한 번 우리 반 명단을 받아 둠 */
 let classNames = {};
 function rosterName(sid) { return classNames[sid] || sid; }
-async function loadClassNames() {
-  try { (await store.listClassNames(me.cls)).forEach(s => classNames[s.sid] = s.name); } catch (e) { console.error(e); }
-}
 
 /* ---------- 선생님 ---------- */
 /* 처음 한 번은 선생님 비밀번호를 정하고, 그다음부터는 그 비밀번호로 들어감 */
-$("teacherLoginBtn").onclick = () => {
-  const first = !store.hasTeacherPw();
+$("teacherLoginBtn").onclick = async () => {
+  const first = !(await store.hasTeacherPw());
   $("tLoginTitle").textContent = first ? "선생님 비밀번호 만들기" : "선생님 로그인";
   $("tpwHelp").textContent = first ? "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 이 크롬의 사이트 데이터를 지워야 하고, 기록도 함께 사라져요." : "";
   $("tpw2Wrap").classList.toggle("hidden", !first);
@@ -903,20 +970,21 @@ $("teacherLoginBtn").onclick = () => {
 $("tLoginBack").onclick = () => show("vLogin");
 $("tLoginForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const first = !store.hasTeacherPw(), pw = $("tpw").value;
+  const first = !(await store.hasTeacherPw()), pw = $("tpw").value;
   $("tLoginErr").textContent = "";
-  if (pw.length < 4) return $("tLoginErr").textContent = "비밀번호는 4글자 이상이에요.";
+  if (!pw) return $("tLoginErr").textContent = "비밀번호를 입력해 주세요.";
+  if (first && pw.length < 4) return $("tLoginErr").textContent = "비밀번호는 4글자 이상이에요.";
   if (first && pw !== $("tpw2").value) return $("tLoginErr").textContent = "두 번 입력한 비밀번호가 달라요.";
   $("tLoginBtn").disabled = true;
   try { if (first) await store.teacherSetup(pw); else await store.teacherLogin(pw); $("tpw").value = ""; $("tpw2").value = ""; }
-  catch (err) { console.warn(err); $("tLoginErr").textContent = "비밀번호가 맞지 않아요."; }
+  catch (err) { console.warn(err); $("tLoginErr").textContent = errMsg(err, "비밀번호가 맞지 않아요."); }
   finally { $("tLoginBtn").disabled = false; }
 });
 $("tLogout").onclick = () => store.logout();
 
 let curClass = 1, tPane = "rec";
 function openTeacher() {
-  $("tEmail").textContent = "이 컴퓨터(크롬)에 저장된 기록을 관리해요";
+  $("tEmail").textContent = REMOTE ? "구글 시트에 모인 기록을 관리해요" : "이 컴퓨터(크롬)에 저장된 기록을 관리해요";
   drawRosterTabs();
   show("vTeacher");
   setPane(tPane);
@@ -1078,18 +1146,20 @@ $("csvBtn").onclick = () => {
 };
 
 /* ---------- 백업 파일 받기 · 합치기 ---------- */
-$("bkExport").onclick = () => {
-  const url = URL.createObjectURL(new Blob([store.exportAll()], { type: "application/json" }));
-  const a = document.createElement("a"); a.href = url; a.download = `양궁기록_백업_${todayKST()}.json`; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  $("bkMsg").innerHTML = `<span class="ok">백업 파일을 받았어요. 내려받기 폴더를 확인하세요.</span>`;
+$("bkExport").onclick = async () => {
+  try {
+    const url = URL.createObjectURL(new Blob([await store.exportAll()], { type: "application/json" }));
+    const a = document.createElement("a"); a.href = url; a.download = `양궁기록_백업_${todayKST()}.json`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    $("bkMsg").innerHTML = `<span class="ok">백업 파일을 받았어요. 내려받기 폴더를 확인하세요.</span>`;
+  } catch (err) { console.error(err); $("bkMsg").textContent = errMsg(err); }
 };
 $("bkFile").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
     const r = await store.importMerge(JSON.parse(await f.text()));
     $("bkMsg").innerHTML = `<span class="ok">학생 ${r.students}명을 더하고, 기록 ${r.sessions}건을 합쳤어요.</span>`;
-  } catch (err) { console.error(err); $("bkMsg").textContent = "읽을 수 없는 파일이에요. 이 사이트에서 받은 백업 파일(.json)인지 확인해 주세요."; }
+  } catch (err) { console.error(err); $("bkMsg").textContent = err && err.message === "format" ? "읽을 수 없는 파일이에요. 이 사이트에서 받은 백업 파일(.json)인지 확인해 주세요." : errMsg(err); }
   e.target.value = "";
 };
 
@@ -1139,7 +1209,13 @@ $("pasteBtn").onclick = async () => {
 };
 
 /* ---------- 시작 ---------- */
-try { store = makeLocalStore(); store.onChange(route); }
+$("modeNote").innerHTML = REMOTE ? "기록은 선생님의 구글 시트에 저장돼요.<br>어느 기기에서 들어와도 같은 기록이 보여요."
+                                 : "기록은 이 컴퓨터의 크롬에 저장돼요.<br>다른 컴퓨터나 다른 브라우저에서는 보이지 않아요.";
+const bkWarn = ` <b>백업 파일에는 학생 비밀번호가 들어 있으니 다른 사람에게 주지 마세요.</b>`;
+$("bkIntro").innerHTML = (REMOTE
+  ? `기록은 <b>선생님의 구글 시트</b>에 저장돼요(시트 탭: students · sessions · pub). 이 백업 파일은 여분으로 보관하거나 다른 시트로 옮길 때 써요.`
+  : `기록은 <b>이 컴퓨터의 크롬</b>에만 저장돼요. 크롬의 사이트 데이터를 지우면 기록도 사라지니, 수업이 끝날 때마다 파일로 받아 두세요. 다른 컴퓨터의 기록을 한곳에 모을 때도 이 파일을 써요.`) + bkWarn;
+try { store = REMOTE ? makeRemoteStore(SERVER_URL) : makeLocalStore(); store.onChange(route); }
 catch (e) { console.error(e); $("vLoading").textContent = "이 브라우저에서는 기록을 저장할 수 없어요. 크롬의 일반 창에서 열어 주세요."; }
 </script>
 </body>
