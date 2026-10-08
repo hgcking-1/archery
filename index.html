@@ -131,10 +131,6 @@
     <div><h1>3학년 양궁 기록장</h1><div class="sub">서울사대부설여중 체육 · 양궁 수업</div></div>
   </header>
 
-  <div id="demoBar" class="note hidden" style="margin:0 0 14px">
-    <b>미리보기 모드</b> — 아직 Firebase 설정 전이라 이 컴퓨터의 크롬에만 저장돼요.<br>
-    연습용 학생: <b>3101</b> / 1111 · <b>3102</b> / 2222 · <b>3201</b> / 3333 · [선생님 로그인]은 바로 열려요.
-  </div>
   <div id="vLoading" class="loading">불러오는 중…</div>
 
   <!-- 학생 로그인 -->
@@ -147,7 +143,25 @@
       <button class="btn" id="loginBtn" type="submit">들어가기</button>
       <div class="err" id="loginErr"></div>
     </form>
+    <div class="small center" style="margin-top:14px">기록은 이 컴퓨터의 크롬에 저장돼요.<br>다른 컴퓨터나 다른 브라우저에서는 보이지 않아요.</div>
     <div class="foot"><button class="ghost" id="teacherLoginBtn">선생님 로그인</button></div>
+  </section>
+
+  <!-- 선생님 로그인 (비밀번호) -->
+  <section id="vTLogin" class="card hidden">
+    <form id="tLoginForm" autocomplete="off">
+      <b id="tLoginTitle">선생님 로그인</b>
+      <div class="small" id="tpwHelp" style="margin-top:6px"></div>
+      <label for="tpw">선생님 비밀번호</label>
+      <input id="tpw" type="password" autocomplete="off">
+      <div id="tpw2Wrap" class="hidden">
+        <label for="tpw2">비밀번호 한 번 더</label>
+        <input id="tpw2" type="password" autocomplete="off">
+      </div>
+      <button class="btn" id="tLoginBtn" type="submit">들어가기</button>
+      <div class="err" id="tLoginErr"></div>
+    </form>
+    <div class="foot"><button class="ghost" id="tLoginBack">← 학생 로그인으로</button></div>
   </section>
 
   <!-- 학생: 오늘 기록 -->
@@ -231,6 +245,7 @@
         <button class="chip on" data-p="rec">📋 날짜별 기록</button>
         <button class="chip" data-p="avg">📈 반별 평균</button>
         <button class="chip" data-p="roster">👥 명단·비밀번호</button>
+        <button class="chip" data-p="backup">💾 백업</button>
       </div>
     </div>
 
@@ -263,6 +278,18 @@
       <div id="rosterBox"><div class="loading">명단 불러오는 중…</div></div>
     </div>
 
+    <!-- 백업·합치기 -->
+    <div class="card t-pane hidden" id="pBackup" style="margin-top:12px">
+      <b>백업 · 합치기</b>
+      <p class="small">기록은 <b>이 컴퓨터의 크롬</b>에만 저장돼요. 크롬의 사이트 데이터를 지우면 기록도 사라지니, 수업이 끝날 때마다 파일로 받아 두세요.
+      다른 컴퓨터의 기록을 한곳에 모을 때도 이 파일을 써요.</p>
+      <button class="btn save" id="bkExport">⬇ 전체 백업 파일 받기 (.json)</button>
+      <label for="bkFile">백업 파일 불러와 합치기</label>
+      <input id="bkFile" type="file" accept=".json,application/json">
+      <p class="small">없는 학생과 기록은 더하고, 같은 학생·같은 날 기록은 더 나중에 저장한 쪽을 남겨요. 선생님 비밀번호는 파일에 들어가지 않아요.</p>
+      <div class="err" id="bkMsg"></div>
+    </div>
+
     <div class="card t-pane hidden" id="pPaste" style="margin-top:16px">
       <b>명단 붙여넣기</b>
       <p class="small">엑셀 '전체명단' 시트에서 <b>반 · 번호 · 학번 · 이름 · 비밀번호</b> 칸을 통째로 복사해 아래에 붙여넣고 [명단 저장]을 누르세요.
@@ -273,11 +300,6 @@
     </div>
   </section>
 
-  <section id="vNotTeacher" class="card hidden center">
-    <p>이 구글 계정은 관리 권한이 없어요.</p>
-    <p class="small" id="ntEmail"></p>
-    <button class="btn line-btn" id="ntLogout">돌아가기</button>
-  </section>
 </div>
 <div class="modal hidden" id="edModal">
   <div class="modal-box">
@@ -300,23 +322,11 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-/* ▼▼ Firebase 설정: 콘솔에서 복사한 값으로 바꿔 넣으세요 ▼▼
-   (바꾸기 전에는 '미리보기 모드'로 열려요. 자료는 이 컴퓨터의 크롬에만 저장돼요.) */
-const firebaseConfig = {
-  apiKey: "AIzaSyAd3KqkCa_WSgBub2gGj8mai6shP8t9KsA",
-  authDomain: "archery-snug.firebaseapp.com",
-  projectId: "archery-snug",
-  storageBucket: "archery-snug.firebasestorage.app",
-  messagingSenderId: "567917417048",
-  appId: "1:567917417048:web:5221673a8c27a4d2a8b02d"
-};
-/* ▲▲ 여기까지 ▲▲ */
-const TEACHERS = ["teacher1@example.com", "teacher2@example.com"];   // 관리 선생님 구글 계정 — 자리표시자! 배포 전에 실제 이메일로 바꾸세요 (보안 규칙 파일과 같아야 함)
+/* 서버 없이 크롬 하나로 동작: 모든 기록은 이 컴퓨터의 크롬(localStorage)에 저장돼요. */
 const CLASSES = [1,2,3,4,5,6];
-const DEMO = firebaseConfig.apiKey.includes("붙여넣기");
 
 const $ = id => document.getElementById(id);
-const views = ["vLoading","vLogin","vStudent","vTeacher","vNotTeacher"];
+const views = ["vLoading","vLogin","vTLogin","vStudent","vTeacher"];
 const show = v => views.forEach(x => $(x).classList.toggle("hidden", x !== v));
 const toast = msg => { const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -328,149 +338,116 @@ const pts = k => k === "X" ? 10 : k === "M" ? 0 : Number(k);
 const zone = k => ({X:"gold","10":"gold","9":"gold","8":"red","7":"red","6":"blue","5":"blue","4":"black","3":"black","2":"white","1":"white",M:"miss"})[k];
 
 /* =====================================================================
-   자료 저장소: 실제(Firebase) 또는 미리보기(이 PC 크롬에만 저장) 중 하나
+   자료 저장소: 이 컴퓨터의 크롬(localStorage)에만 저장함 — 서버·Firebase 없음
    화면 코드는 아래 함수들만 사용함
    ===================================================================== */
 let store;
 
-async function makeFirebaseStore() {
-  const V = "https://www.gstatic.com/firebasejs/10.12.2/";
-  const { initializeApp } = await import(V + "firebase-app.js");
-  const A = await import(V + "firebase-auth.js");
-  const F = await import(V + "firebase-firestore.js");
-  const app = initializeApp(firebaseConfig);
-  const auth = A.getAuth(app), db = F.getFirestore(app);
-  let busy = false;
-  return {
-    onChange(cb) {
-      A.onAuthStateChanged(auth, async user => {
-        if (busy) return;
-        if (!user) return cb(null);
-        if (!user.isAnonymous) return cb({ kind: "google", email: user.email });
-        try {
-          const link = await F.getDoc(F.doc(db, "links", user.uid));
-          if (!link.exists()) { await A.signOut(auth); return; }
-          cb({ kind: "student", sid: link.data().sid });
-        } catch (e) { console.error(e); await A.signOut(auth); }
-      });
-    },
-    async studentLogin(sid, pin) {
-      busy = true;
-      try {
-        const cred = await A.signInAnonymously(auth);
-        // 학번·비밀번호가 틀리면 보안 규칙이 여기서 거절함
-        await F.setDoc(F.doc(db, "links", cred.user.uid), { sid, cls: Number(sid[1]), pin, at: F.serverTimestamp() });
-      } catch (e) { await A.signOut(auth).catch(()=>{}); throw e; }
-      finally { busy = false; }
-    },
-    async teacherLogin() { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); },
-    async logout() {
-      const u = auth.currentUser;
-      if (u && u.isAnonymous) { try { await F.deleteDoc(F.doc(db, "links", u.uid)); } catch (e) {} }
-      await A.signOut(auth);
-    },
-    async getStudent(sid) { return (await F.getDoc(F.doc(db, "students", sid))).data(); },
-    async listClass(cls) {
-      const qs = await F.getDocs(F.query(F.collection(db, "students"), F.where("cls", "==", cls)));
-      const list = qs.docs.map(d => d.data()).sort((a,b) => a.no - b.no);
-      const sec = await Promise.all(list.map(s => F.getDoc(F.doc(db, "secrets", s.sid))));
-      sec.forEach((d,i) => list[i].pin = d.exists() ? d.data().pin : "");
-      return list;
-    },
-    async savePin(sid, pin) { await F.setDoc(F.doc(db, "secrets", sid), { pin }); },
-    async getSession(sid, date) {
-      const d = await F.getDoc(F.doc(db, "sessions", `${sid}_${date}`));
-      return d.exists() ? d.data() : null;
-    },
-    async listAllStudents() { return (await F.getDocs(F.collection(db, "students"))).docs.map(d => d.data()); },
-    async getAllSessions() { return (await F.getDocs(F.collection(db, "sessions"))).docs.map(d => d.data()); },
-    async deleteSession(stu, date) {
-      const b = F.writeBatch(db);
-      b.delete(F.doc(db, "sessions", `${stu.sid}_${date}`));
-      if (stu.anon) b.delete(F.doc(db, "pub", `${date}_${stu.anon}`));
-      await b.commit();
-    },
-    async listClassNames(cls) {
-      const qs = await F.getDocs(F.query(F.collection(db, "students"), F.where("cls", "==", cls)));
-      return qs.docs.map(d => ({ sid: d.id, name: d.data().name }));
-    },
-    async getClassSessions(cls) {
-      const qs = await F.getDocs(F.query(F.collection(db, "sessions"), F.where("cls", "==", cls)));
-      return qs.docs.map(d => d.data());
-    },
-    async getPub() {
-      const qs = await F.getDocs(F.collection(db, "pub"));
-      return qs.docs.map(d => ({ id: d.id, ...d.data() }));
-    },
-    async getMySessions(stu) {
-      const qs = await F.getDocs(F.query(F.collection(db, "sessions"), F.where("cls", "==", stu.cls), F.where("sid", "==", stu.sid)));
-      return qs.docs.map(d => d.data()).sort((a, b) => a.date < b.date ? -1 : 1);
-    },
-    async saveSession(stu, rec) {
-      // 이름이 들어간 기록(우리 반만 볼 수 있음) + 이름 없는 기록(다른 반 평균·전체 순위용)
-      const b = F.writeBatch(db);
-      b.set(F.doc(db, "sessions", `${stu.sid}_${rec.date}`), { sid: stu.sid, cls: stu.cls, ...rec, updatedAt: F.serverTimestamp() });
-      if (stu.anon) b.set(F.doc(db, "pub", `${rec.date}_${stu.anon}`), { cls: stu.cls, date: rec.date, count: rec.count, total: rec.total, xs: rec.xs, avg: rec.avg });
-      await b.commit();
-    },
-    async saveRoster(rows) {
-      const old = {};
-      (await F.getDocs(F.collection(db, "students"))).forEach(d => old[d.id] = d.data());
-      for (let i = 0; i < rows.length; i += 200) {          // 한 번에 최대 200명씩 저장
-        const b = F.writeBatch(db);
-        rows.slice(i, i+200).forEach(r => {
-          const anon = old[r.sid]?.anon || randomKey();
-          b.set(F.doc(db, "students", r.sid), { sid: r.sid, cls: r.cls, no: r.no, name: r.name, anon });
-          b.set(F.doc(db, "secrets", r.sid), { pin: r.pin });
-        });
-        await b.commit();
-      }
-    }
-  };
-}
+const SCORE_KEYS = ["X","10","9","8","7","6","5","4","3","2","1","M"];
+const cleanStudent = st => {
+  if (!st || !/^3[1-6]\d{2}$/.test(st.sid) || !/^\d{4}$/.test(String(st.pin))) return null;
+  return { sid: st.sid, cls: +st.sid[1], no: +st.sid.slice(2), name: String(st.name ?? "").slice(0, 20), pin: String(st.pin),
+           anon: typeof st.anon === "string" && /^[0-9a-z]{6,20}$/.test(st.anon) ? st.anon : randomKey() };
+};
+const cleanSession = s => {      // 파일에서 가져온 기록은 형식을 확인하고 합계·평균을 다시 계산함
+  if (!s || !/^3[1-6]\d{2}$/.test(s.sid) || !/^\d{4}-\d{2}-\d{2}$/.test(s.date) || isNaN(Date.parse(s.date)) || !Array.isArray(s.arrows)) return null;
+  const arrows = s.arrows.slice(0, MAX_ARROWS).map(norm).filter(a => a && SCORE_KEYS.includes(a.k))
+    .map(a => Number.isFinite(a.x) && Number.isFinite(a.y) ? { k: a.k, x: a.x, y: a.y } : { k: a.k });
+  const total = arrows.reduce((t, a) => t + pts(a.k), 0);
+  return { sid: s.sid, cls: +s.sid[1], date: s.date, arrows, count: arrows.length, total,
+           xs: arrows.filter(a => a.k === "X").length, avg: arrows.length ? Math.round(total / arrows.length * 100) / 100 : 0,
+           updatedAt: Number.isFinite(s.updatedAt) ? s.updatedAt : 0 };
+};
 
-function makeDemoStore() {
-  const KEY = "archery-demo";
-  const seed = { students: {
-      "3101": { sid:"3101", cls:1, no:1, name:"김연습", pin:"1111" },
-      "3102": { sid:"3102", cls:1, no:2, name:"이연습", pin:"2222" },
-      "3201": { sid:"3201", cls:2, no:1, name:"박연습", pin:"3333" } }, session: null };
-  let data;
-  try { data = JSON.parse(localStorage.getItem(KEY)) || seed; } catch (e) { data = seed; }
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
-  let cb = () => {};
-  const emit = () => cb(data.session);
+function makeLocalStore() {
+  const KEY = "archery-local", SKEY = "archery-session";
+  localStorage.setItem(KEY + "-test", "1"); localStorage.removeItem(KEY + "-test");   // 저장이 막혀 있으면 여기서 오류
+  const blank = () => ({ students: {}, sessions: {}, pub: {}, teacher: null });
+  const D = () => {              // 쓸 때마다 저장된 최신 내용을 읽음 (탭을 여러 개 열어도 서로 덮어쓰지 않게)
+    let d; try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    d = d && typeof d === "object" ? d : blank();
+    for (const k of ["students", "sessions", "pub"]) if (!d[k] || typeof d[k] !== "object") d[k] = {};
+    return d;
+  };
+  const save = d => localStorage.setItem(KEY, JSON.stringify(d));
+  const hashPw = async (pw, salt) => {
+    const text = salt + ":" + pw;
+    try {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
+    } catch (e) { let h = 5381; for (const c of text) h = ((h << 5) + h + c.charCodeAt(0)) | 0; return "x" + h; }
+  };
+  // 로그인 상태는 탭을 닫으면 사라지게 sessionStorage에 둠 (공용 컴퓨터에서 앞사람 기록이 안 열리도록)
+  let cb = () => {}, cur = null;
+  try { cur = JSON.parse(sessionStorage.getItem(SKEY)); } catch (e) {}
+  { const d = D(); if (cur && !(cur.kind === "teacher" ? d.teacher : d.students[cur.sid])) cur = null; }
+  const setCur = s => { cur = s; try { s ? sessionStorage.setItem(SKEY, JSON.stringify(s)) : sessionStorage.removeItem(SKEY); } catch (e) {} };
+  const emit = () => cb(cur);
   const wait = () => new Promise(r => setTimeout(r, 250));
   return {
     onChange(f) { cb = f; emit(); },
     async studentLogin(sid, pin) {
       await wait();
-      const s = data.students[sid];
+      const s = D().students[sid];
       if (!s || s.pin !== pin) throw new Error("wrong");
-      data.session = { kind: "student", sid }; save();
+      setCur({ kind: "student", sid });
     },
-    async teacherLogin() { data.session = { kind: "google", email: TEACHERS[0] }; save(); emit(); },
-    async logout() { data.session = null; save(); emit(); },
-    async getStudent(sid) { const { pin, ...rest } = data.students[sid]; return rest; },
-    async listClass(cls) { return Object.values(data.students).filter(s => s.cls === cls).sort((a,b) => a.no - b.no).map(s => ({...s})); },
-    async savePin(sid, pin) { data.students[sid].pin = pin; save(); },
-    async saveRoster(rows) { rows.forEach(r => data.students[r.sid] = { anon: data.students[r.sid]?.anon || randomKey(), ...r }); save(); },
-    async listAllStudents() { return Object.values(data.students).map(({ pin, ...r }) => r); },
-    async getAllSessions() { return Object.values(data.sessions || {}); },
-    async deleteSession(stu, date) { delete (data.sessions || {})[`${stu.sid}_${date}`]; delete (data.pub || {})[`${date}_${stu.anon || stu.sid}`]; save(); },
-    async listClassNames(cls) { return Object.values(data.students).filter(s => s.cls === cls).map(s => ({ sid: s.sid, name: s.name })); },
-    async getClassSessions(cls) { return Object.values(data.sessions || {}).filter(s => s.cls === cls); },
-    async getPub() { return Object.entries(data.pub || {}).map(([id, v]) => ({ id, ...v })); },
-    async getMySessions(stu) { return Object.values(data.sessions || {}).filter(s => s.sid === stu.sid).sort((a, b) => a.date < b.date ? -1 : 1); },
-    async getSession(sid, date) { await wait(); return (data.sessions || {})[`${sid}_${date}`] || null; },
+    studentCount() { return Object.keys(D().students).length; },
+    hasTeacherPw() { return !!D().teacher; },
+    async teacherSetup(pw) {
+      const salt = randomKey(), hash = await hashPw(pw, salt);
+      const d = D(); d.teacher = { salt, hash }; save(d);
+      setCur({ kind: "teacher" }); emit();
+    },
+    async teacherLogin(pw) {
+      await wait();
+      const t = D().teacher;
+      if (!t || await hashPw(pw, t.salt) !== t.hash) throw new Error("wrong");
+      setCur({ kind: "teacher" }); emit();
+    },
+    async logout() { setCur(null); emit(); },
+    async getStudent(sid) { const { pin, ...rest } = D().students[sid]; return rest; },
+    async listClass(cls) { return Object.values(D().students).filter(s => s.cls === cls).sort((a, b) => a.no - b.no).map(s => ({ ...s })); },
+    async savePin(sid, pin) { const d = D(); d.students[sid].pin = pin; save(d); },
+    async saveRoster(rows) { const d = D(); rows.forEach(r => d.students[r.sid] = { anon: d.students[r.sid]?.anon || randomKey(), ...r }); save(d); },
+    async listAllStudents() { return Object.values(D().students).map(({ pin, ...r }) => r); },
+    async getAllSessions() { return Object.values(D().sessions); },
+    async deleteSession(stu, date) { const d = D(); delete d.sessions[`${stu.sid}_${date}`]; delete d.pub[`${date}_${stu.anon || stu.sid}`]; save(d); },
+    async listClassNames(cls) { return Object.values(D().students).filter(s => s.cls === cls).map(s => ({ sid: s.sid, name: s.name })); },
+    async getClassSessions(cls) { return Object.values(D().sessions).filter(s => s.cls === cls); },
+    async getPub() { return Object.entries(D().pub).map(([id, v]) => ({ id, ...v })); },
+    async getMySessions(stu) { return Object.values(D().sessions).filter(s => s.sid === stu.sid).sort((a, b) => a.date < b.date ? -1 : 1); },
+    async getSession(sid, date) { return D().sessions[`${sid}_${date}`] || null; },
     async saveSession(stu, rec) {
-      data.sessions = data.sessions || {}; data.pub = data.pub || {};
-      data.sessions[`${stu.sid}_${rec.date}`] = { sid: stu.sid, cls: stu.cls, ...rec };
-      data.pub[`${rec.date}_${stu.anon || stu.sid}`] = { cls: stu.cls, date: rec.date, count: rec.count, total: rec.total, xs: rec.xs, avg: rec.avg };
-      save();
+      const d = D();
+      d.sessions[`${stu.sid}_${rec.date}`] = { sid: stu.sid, cls: stu.cls, ...rec, updatedAt: Date.now() };
+      d.pub[`${rec.date}_${stu.anon || stu.sid}`] = { cls: stu.cls, date: rec.date, count: rec.count, total: rec.total, xs: rec.xs, avg: rec.avg };
+      save(d);
+    },
+    /* 백업 파일 만들기 (선생님 비밀번호는 넣지 않음) */
+    exportAll() { const { teacher, ...rest } = D(); return JSON.stringify({ app: "archery", v: 1, exportedAt: new Date().toISOString(), ...rest }); },
+    /* 백업 파일 합치기: 없는 학생·기록은 더하고, 같은 날 기록은 더 나중에 저장한 쪽을 남김 */
+    async importMerge(obj) {
+      if (!obj || obj.app !== "archery" || typeof obj.students !== "object") throw new Error("format");
+      const d = D(), n = { students: 0, sessions: 0 };
+      for (const raw of Object.values(obj.students || {})) {
+        const s = cleanStudent(raw);
+        if (s && !d.students[s.sid]) { d.students[s.sid] = s; n.students++; }
+      }
+      for (const raw of Object.values(obj.sessions || {})) {
+        const s = cleanSession(raw), stu = s && d.students[s.sid];
+        if (!stu) continue;
+        const key = `${s.sid}_${s.date}`, old = d.sessions[key];
+        if (old && !(s.updatedAt > (old.updatedAt || 0) || (s.updatedAt === (old.updatedAt || 0) && s.count > old.count))) continue;
+        d.sessions[key] = s; n.sessions++;
+        d.pub[`${s.date}_${stu.anon}`] = { cls: s.cls, date: s.date, count: s.count, total: s.total, xs: s.xs, avg: s.avg };
+      }
+      save(d);
+      return n;
     }
   };
 }
+
 
 /* ---------- 화면 전환: 누가 로그인했는지에 따라 ---------- */
 let loggingIn = false;
@@ -478,11 +455,7 @@ async function route(session) {
   if (loggingIn) return;
   app$.classList.remove("wide");
   if (!session) return show("vLogin");
-  if (session.kind === "google") {
-    if (TEACHERS.includes(session.email)) { app$.classList.add("wide"); openTeacher(session.email); }
-    else { $("ntEmail").textContent = session.email; show("vNotTeacher"); }
-    return;
-  }
+  if (session.kind === "teacher") { app$.classList.add("wide"); openTeacher(); return; }
   try { await openStudent(session.sid); } catch (e) { console.error(e); store.logout(); }
 }
 
@@ -504,7 +477,8 @@ $("loginForm").addEventListener("submit", async e => {
     await openStudent(sid);
   } catch (err) {
     console.warn(err);
-    $("loginErr").textContent = "학번이나 비밀번호가 맞지 않아요.";
+    $("loginErr").textContent = store.studentCount() ? "학번이나 비밀번호가 맞지 않아요."
+      : "아직 명단이 없어요. 선생님이 먼저 [선생님 로그인]에서 명단을 넣어야 해요.";
     show("vLogin");
   } finally {
     loggingIn = false;
@@ -697,7 +671,7 @@ function saveSoon() {
     const rec = summary();
     saving = saving.then(() => store.saveSession(me, rec))
       .then(() => { $("saveState").textContent = "✓ 저장됨"; boardSoon(); })
-      .catch(e => { console.error(e); $("saveState").innerHTML = `<span class="err">저장 실패 — 인터넷을 확인하세요</span>`; });
+      .catch(e => { console.error(e); $("saveState").innerHTML = `<span class="err">저장 실패 — 크롬 저장 공간을 확인하세요</span>`; });
   }, 600);
 }
 $("logoutBtn").onclick = async () => { clearTimeout(saveTimer); if ($("saveState").textContent === "저장 중…") await store.saveSession(me, summary()).catch(()=>{}); await saving; store.logout(); };
@@ -917,16 +891,32 @@ async function loadClassNames() {
 }
 
 /* ---------- 선생님 ---------- */
-$("teacherLoginBtn").onclick = async () => {
-  try { await store.teacherLogin(); }
-  catch (e) { if (e.code !== "auth/popup-closed-by-user") toast("구글 로그인에 실패했어요: " + (e.code || e.message)); }
+/* 처음 한 번은 선생님 비밀번호를 정하고, 그다음부터는 그 비밀번호로 들어감 */
+$("teacherLoginBtn").onclick = () => {
+  const first = !store.hasTeacherPw();
+  $("tLoginTitle").textContent = first ? "선생님 비밀번호 만들기" : "선생님 로그인";
+  $("tpwHelp").textContent = first ? "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 이 크롬의 사이트 데이터를 지워야 하고, 기록도 함께 사라져요." : "";
+  $("tpw2Wrap").classList.toggle("hidden", !first);
+  $("tpw").value = ""; $("tpw2").value = ""; $("tLoginErr").textContent = "";
+  show("vTLogin"); $("tpw").focus();
 };
+$("tLoginBack").onclick = () => show("vLogin");
+$("tLoginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const first = !store.hasTeacherPw(), pw = $("tpw").value;
+  $("tLoginErr").textContent = "";
+  if (pw.length < 4) return $("tLoginErr").textContent = "비밀번호는 4글자 이상이에요.";
+  if (first && pw !== $("tpw2").value) return $("tLoginErr").textContent = "두 번 입력한 비밀번호가 달라요.";
+  $("tLoginBtn").disabled = true;
+  try { if (first) await store.teacherSetup(pw); else await store.teacherLogin(pw); $("tpw").value = ""; $("tpw2").value = ""; }
+  catch (err) { console.warn(err); $("tLoginErr").textContent = "비밀번호가 맞지 않아요."; }
+  finally { $("tLoginBtn").disabled = false; }
+});
 $("tLogout").onclick = () => store.logout();
-$("ntLogout").onclick = () => store.logout();
 
 let curClass = 1, tPane = "rec";
-function openTeacher(email) {
-  $("tEmail").textContent = email + (DEMO ? " (미리보기)" : "");
+function openTeacher() {
+  $("tEmail").textContent = "이 컴퓨터(크롬)에 저장된 기록을 관리해요";
   drawRosterTabs();
   show("vTeacher");
   setPane(tPane);
@@ -943,7 +933,8 @@ function setPane(p) {
   $("pAvg").classList.toggle("hidden", p !== "avg");
   $("pRoster").classList.toggle("hidden", p !== "roster");
   $("pPaste").classList.toggle("hidden", p !== "roster");
-  if (p === "roster") loadRoster(); else loadTeacherData();
+  $("pBackup").classList.toggle("hidden", p !== "backup");
+  if (p === "roster") loadRoster(); else if (p === "rec" || p === "avg") loadTeacherData();
 }
 
 /* ---------- 선생님: 전체 기록 ---------- */
@@ -1086,6 +1077,22 @@ $("csvBtn").onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 
+/* ---------- 백업 파일 받기 · 합치기 ---------- */
+$("bkExport").onclick = () => {
+  const url = URL.createObjectURL(new Blob([store.exportAll()], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = `양궁기록_백업_${todayKST()}.json`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  $("bkMsg").innerHTML = `<span class="ok">백업 파일을 받았어요. 내려받기 폴더를 확인하세요.</span>`;
+};
+$("bkFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const r = await store.importMerge(JSON.parse(await f.text()));
+    $("bkMsg").innerHTML = `<span class="ok">학생 ${r.students}명을 더하고, 기록 ${r.sessions}건을 합쳤어요.</span>`;
+  } catch (err) { console.error(err); $("bkMsg").textContent = "읽을 수 없는 파일이에요. 이 사이트에서 받은 백업 파일(.json)인지 확인해 주세요."; }
+  e.target.value = "";
+};
+
 async function loadRoster() {
   $("rosterBox").innerHTML = `<div class="loading">명단 불러오는 중…</div>`;
   try {
@@ -1102,8 +1109,8 @@ async function loadRoster() {
       const sid = e.target.dataset.save; if (!sid) return;
       const v = $("rosterBox").querySelector(`input[data-sid="${sid}"]`).value.trim();
       if (!/^\d{4}$/.test(v)) return toast("비밀번호는 숫자 4자리로 적어 주세요.");
-      await store.savePin(sid, v);
-      toast(`${sid} 비밀번호를 ${v}(으)로 바꿨어요.`);
+      try { await store.savePin(sid, v); toast(`${sid} 비밀번호를 ${v}(으)로 바꿨어요.`); }
+      catch (err) { console.error(err); toast("저장하지 못했어요."); }
     };
   } catch (e) { console.error(e); $("rosterBox").innerHTML = `<p class="err">명단을 불러오지 못했어요. (${esc(e.code||e.message)})</p>`; }
 }
@@ -1132,9 +1139,8 @@ $("pasteBtn").onclick = async () => {
 };
 
 /* ---------- 시작 ---------- */
-if (DEMO) $("demoBar").classList.remove("hidden");
-try { store = DEMO ? makeDemoStore() : await makeFirebaseStore(); store.onChange(route); }
-catch (e) { console.error(e); $("vLoading").textContent = "인터넷 연결을 확인해 주세요."; }
+try { store = makeLocalStore(); store.onChange(route); }
+catch (e) { console.error(e); $("vLoading").textContent = "이 브라우저에서는 기록을 저장할 수 없어요. 크롬의 일반 창에서 열어 주세요."; }
 </script>
 </body>
 </html>
