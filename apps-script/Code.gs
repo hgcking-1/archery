@@ -6,9 +6,10 @@
  * 자세한 순서는 저장소 README.md 의 "여러 기기에서 함께 쓰기"를 보세요.
  */
 
-// ▼▼ 선생님 비밀번호를 바꾸세요. 이 파일은 선생님 구글 계정에서만 보여요. ▼▼
-const TEACHER_PASSWORD = "CHANGE-ME";
-// ▲▲ 여기까지 ▲▲
+// 선생님 비밀번호는 배포 뒤 사이트에서 [선생님 로그인]을 처음 누를 때 정해요. (스크립트 속성 TEACHER_HASH에 암호화해 저장)
+// 잊어버렸으면 Apps Script ⚙ 프로젝트 설정 → 스크립트 속성에서 TEACHER_HASH를 지우고 사이트에서 다시 정하세요.
+// 아래 따옴표 안에 직접 적어 두면 그 비밀번호를 대신 써요. (비워 두는 것을 권해요)
+const TEACHER_PASSWORD = "";
 
 const TZ = "Asia/Seoul";
 const MAX_ARROWS = 30;
@@ -45,7 +46,7 @@ function doPost(e) {
 }
 
 const ACTIONS = {
-  studentLogin, teacherLogin, me, board, mySessions, getSession, saveSession,
+  studentLogin, teacherStatus, teacherSetup, teacherLogin, me, board, mySessions, getSession, saveSession,
   listStudents, saveRoster, savePin, allSessions, teacherSaveSession, deleteSession, exportAll, importMerge
 };
 
@@ -66,10 +67,33 @@ function studentLogin(req) {
   return { token: makeToken("student", sid), sid };
 }
 
+// 코드에 적은 비밀번호가 없으면, 처음 한 번 사이트에서 정한 비밀번호(소금 + SHA-256)를 써요.
+function codePw() { return TEACHER_PASSWORD && TEACHER_PASSWORD !== "CHANGE-ME" ? TEACHER_PASSWORD : ""; }
+function storedPw() { return PropertiesService.getScriptProperties().getProperty("TEACHER_HASH") || ""; }
+function hashPw(pw, salt) {
+  return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + "|" + pw, Utilities.Charset.UTF_8));
+}
+
+function teacherStatus() { return { set: !!(codePw() || storedPw()) }; }
+
+function teacherSetup(req) {
+  const pw = String(req.pw || "");
+  if (pw.length < 4) throw fail("bad");
+  return withLock(() => {
+    if (codePw() || storedPw()) throw fail("already");          // 이미 정했으면 다시 정할 수 없음
+    const salt = Utilities.getUuid();
+    PropertiesService.getScriptProperties().setProperty("TEACHER_HASH", salt + ":" + hashPw(pw, salt));
+    return { token: makeToken("teacher", "") };
+  });
+}
+
 function teacherLogin(req) {
-  if (TEACHER_PASSWORD === "CHANGE-ME") throw fail("unconfigured");
+  const code = codePw(), stored = storedPw(), pw = String(req.pw || "");
+  if (!code && !stored) throw fail("unconfigured");
   if (tooMany("teacher")) throw fail("locked");
-  if (String(req.pw || "") !== TEACHER_PASSWORD) { bump("teacher"); throw fail("wrong"); }
+  const i = stored.indexOf(":");
+  const ok = code ? pw === code : hashPw(pw, stored.slice(0, i)) === stored.slice(i + 1);
+  if (!ok) { bump("teacher"); throw fail("wrong"); }
   return { token: makeToken("teacher", "") };
 }
 

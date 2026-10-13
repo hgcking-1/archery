@@ -488,8 +488,8 @@ function makeRemoteStore(url) {
     mode: "remote",
     onChange(f) { cb = f; emit(); },
     async studentLogin(sid, pin) { const d = await call("studentLogin", { sid, pin }); setCur({ kind: "student", sid: d.sid, token: d.token }); },
-    hasTeacherPw() { return true; },          // 선생님 비밀번호는 서버 코드(Code.gs)에서 정해요
-    async teacherSetup() { throw codeErr("unsupported"); },
+    async hasTeacherPw() { return (await call("teacherStatus")).set; },   // 처음 한 번은 사이트에서 정해 서버에 저장
+    async teacherSetup(pw) { const d = await call("teacherSetup", { pw }); setCur({ kind: "teacher", sid: "", token: d.token }); emit(); },
     async teacherLogin(pw) { const d = await call("teacherLogin", { pw }); setCur({ kind: "teacher", sid: "", token: d.token }); emit(); },
     async logout() { setCur(null); emit(); },
     getStudent: () => call("me"),
@@ -526,7 +526,8 @@ const errMsg = (e, wrong) => ({
   wrong,
   noroster: "아직 명단이 없어요. 선생님이 먼저 [선생님 로그인]에서 명단을 넣어야 해요.",
   locked: "여러 번 틀려서 잠겼어요. 10분 뒤에 다시 해 보세요.",
-  unconfigured: "서버 코드(Code.gs)의 TEACHER_PASSWORD를 먼저 바꿔 주세요.",
+  unconfigured: "아직 선생님 비밀번호가 없어요. [선생님 로그인]에서 먼저 정해 주세요.",
+  already: "선생님 비밀번호가 이미 정해져 있어요. 그 비밀번호로 로그인해 주세요.",
   auth: "로그인이 풀렸어요. 다시 로그인해 주세요."
 })[e && e.code] || (REMOTE ? "서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 보세요." : "처리하지 못했어요.");
 
@@ -962,7 +963,7 @@ function rosterName(sid) { return classNames[sid] || sid; }
 $("teacherLoginBtn").onclick = async () => {
   const first = !(await store.hasTeacherPw());
   $("tLoginTitle").textContent = first ? "선생님 비밀번호 만들기" : "선생님 로그인";
-  $("tpwHelp").textContent = first ? "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 이 크롬의 사이트 데이터를 지워야 하고, 기록도 함께 사라져요." : "";
+  $("tpwHelp").textContent = first ? (REMOTE ? "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 Apps Script ⚙ 프로젝트 설정 → 스크립트 속성에서 TEACHER_HASH를 지우고 다시 정하면 돼요. (기록은 그대로)" : "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 이 크롬의 사이트 데이터를 지워야 하고, 기록도 함께 사라져요.") : "";
   $("tpw2Wrap").classList.toggle("hidden", !first);
   $("tpw").value = ""; $("tpw2").value = ""; $("tLoginErr").textContent = "";
   show("vTLogin"); $("tpw").focus();
