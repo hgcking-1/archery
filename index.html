@@ -961,7 +961,13 @@ function rosterName(sid) { return classNames[sid] || sid; }
 /* ---------- 선생님 ---------- */
 /* 처음 한 번은 선생님 비밀번호를 정하고, 그다음부터는 그 비밀번호로 들어감 */
 $("teacherLoginBtn").onclick = async () => {
-  const first = !(await store.hasTeacherPw());
+  const btn = $("teacherLoginBtn");
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = "확인 중…"; $("loginErr").textContent = "";
+  let first;
+  try { first = !(await store.hasTeacherPw()); }
+  catch (err) { console.warn(err); $("loginErr").textContent = errMsg(err, "처리하지 못했어요."); return; }
+  finally { btn.disabled = false; btn.textContent = "선생님 로그인"; }
   $("tLoginTitle").textContent = first ? "선생님 비밀번호 만들기" : "선생님 로그인";
   $("tpwHelp").textContent = first ? (REMOTE ? "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 Apps Script ⚙ 프로젝트 설정 → 스크립트 속성에서 TEACHER_HASH를 지우고 다시 정하면 돼요. (기록은 그대로)" : "처음이에요. 선생님만 아는 비밀번호(4글자 이상)를 정해 주세요. 잊어버리면 이 크롬의 사이트 데이터를 지워야 하고, 기록도 함께 사라져요.") : "";
   $("tpw2Wrap").classList.toggle("hidden", !first);
