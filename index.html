@@ -143,6 +143,9 @@
   .down-t{color:var(--red);font-weight:700}
   .spark{width:90px;height:26px;display:block;margin:auto}
   .pv-name{background:none;border:none;padding:0;color:var(--green);font-weight:700;text-decoration:underline;font-size:inherit}
+  .view-bar{background:#eef5f1;border-color:#c9ddd3}
+  .view-bar .date-sel{margin-top:8px;width:100%}
+  #tgt.view{cursor:default}
 </style>
 </head>
 <body>
@@ -187,12 +190,20 @@
 
   <!-- 학생: 오늘 기록 -->
   <section id="vStudent" class="hidden">
+    <div class="card view-bar hidden" id="viewBar" style="margin-bottom:12px">
+      <div class="bar">
+        <b>👀 선생님 보기 모드</b>
+        <button class="mini line-btn" id="viewBack">← 선생님 화면으로</button>
+      </div>
+      <div class="small" style="margin-top:6px">학생에게 보이는 화면과 같아요. 여기서는 기록을 고칠 수 없어요. (고치기는 [날짜별 기록]에서)</div>
+      <select id="viewDate" class="date-sel" aria-label="볼 날짜"></select>
+    </div>
     <div class="card me-card">
       <div class="bar">
         <div class="who" id="whoBox"></div>
         <button class="mini line-btn" id="logoutBtn">로그아웃</button>
       </div>
-      <div class="small" style="margin-top:6px">내 이름이 아니면 바로 로그아웃하고 선생님께 알려 주세요.</div>
+      <div class="small" id="meHint" style="margin-top:6px">내 이름이 아니면 바로 로그아웃하고 선생님께 알려 주세요.</div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -214,7 +225,7 @@
         <svg id="tgt" viewBox="-1.12 -1.12 2.24 2.24" aria-label="과녁판: 화살이 맞은 자리를 누르세요"></svg>
       </div>
       <div class="small center" id="editHint"></div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" id="editRow" style="margin-top:10px">
         <button class="z-miss" id="missBtn">M 빗나감</button>
         <button class="line-btn" id="undoBtn">⌫ 지우기</button>
         <button class="line-btn hidden" id="cancelSel">취소</button>
@@ -310,7 +321,7 @@
           <option value="recent">최근 평균 높은 순</option>
         </select>
       </div>
-      <div class="small" style="margin-top:6px">처음 기록한 3회와 최근 3회의 한 발 평균을 비교해요. (기록한 날이 6회보다 적으면 절반씩 비교) 이름을 누르면 그 학생의 누가 과녁과 그래프를 볼 수 있어요.</div>
+      <div class="small" style="margin-top:6px">처음 기록한 3회와 최근 3회의 한 발 평균을 비교해요. (기록한 날이 6회보다 적으면 절반씩 비교) 이름을 누르면 그 학생이 보는 화면(오늘 기록·누가 기록·그래프·순위)을 그대로 볼 수 있어요.</div>
       <div class="tabs" id="pgClassTabs" style="margin-top:10px"></div>
       <div class="small" id="pgSum"></div>
       <div id="pgBox" style="overflow-x:auto"></div>
@@ -360,12 +371,6 @@
       <button class="danger" id="edDelAll">이 기록 전체 삭제</button>
       <button class="save" id="edSave">저장</button>
     </div>
-  </div>
-</div>
-<div class="modal hidden" id="pvModal">
-  <div class="modal-box" style="max-width:520px">
-    <div class="bar"><b id="pvTitle"></b><button class="mini line-btn" id="pvClose">닫기</button></div>
-    <div id="pvBody" style="margin-top:10px"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -565,6 +570,7 @@ function makeRemoteStore(url) {
 let loggingIn = false;
 async function route(session) {
   if (loggingIn) return;
+  viewOnly = false;
   app$.classList.remove("wide");
   if (!session) return show("vLogin");
   if (session.kind === "teacher") { app$.classList.add("wide"); openTeacher(); return; }
@@ -609,17 +615,36 @@ $("loginForm").addEventListener("submit", async e => {
 
 let me = null, arrows = [], sel = -1, today = "", markMode = "today", history = null, drag = null;
 const norm = a => typeof a === "string" ? { k: a } : a;     // 예전 형식(점수만) 기록도 읽기
-async function openStudent(sid) {
-  me = { ...(await store.getStudent(sid)), sid };
+/* 학생 화면이 자료를 읽는 곳: 학생은 store, 선생님 보기 모드는 선생님 화면이 받아 둔 전체 기록(T)에서 만듦 */
+let viewOnly = false, src = null;
+function teacherSource() {
+  const anonOf = sid => T.students[sid]?.anon || sid;
+  return {
+    async getStudent(sid) { const { pin, ...rest } = T.students[sid] || {}; return rest; },
+    async getSession(sid, date) { return T.sessions.find(x => x.sid === sid && x.date === date) || null; },
+    async getMySessions(stu) { return T.sessions.filter(x => x.sid === stu.sid).sort((a, b) => a.date < b.date ? -1 : 1); },
+    async getBoard(cls) {
+      return { names: Object.values(T.students).filter(x => x.cls === cls).map(x => ({ sid: x.sid, name: x.name })),
+               cls: T.sessions.filter(x => x.cls === cls),
+               pub: T.sessions.map(x => ({ id: `${x.date}_${anonOf(x.sid)}`, cls: x.cls, date: x.date, count: x.count, total: x.total, xs: x.xs, avg: x.avg })) };
+    },
+    async saveSession() { throw codeErr("readonly"); }
+  };
+}
+
+async function openStudent(sid, date) {
+  src = viewOnly ? teacherSource() : store;
+  me = { ...(await src.getStudent(sid)), sid };
   $("whoBox").innerHTML = `<b>${esc(me.name)}</b>3학년 ${me.cls}반 ${me.no}번 · ${esc(me.sid)}`;
-  today = todayKST();
+  today = viewOnly && date ? date : todayKST();
   const [y, m, d] = today.split("-").map(Number);
   const wd = "일월화수목금토"[new Date(y, m-1, d).getDay()];
   $("todayLabel").textContent = `${m}월 ${d}일(${wd}) 기록`;
-  const rec = await store.getSession(me.sid, today);
+  const rec = await src.getSession(me.sid, today);
   arrows = rec ? rec.arrows.map(norm) : []; sel = -1; history = null; classNames = {};
   setMarkMode("today");
-  $("saveState").textContent = rec ? "저장된 기록을 불러왔어요" : "";
+  $("saveState").textContent = viewOnly ? (rec ? "" : "이날 기록 없음") : rec ? "저장된 기록을 불러왔어요" : "";
+  applyViewMode();
   show("vStudent");
   myProg ||= makeProgress($("myProg"));
   drawScore();
@@ -632,7 +657,7 @@ let myProg = null;
 async function loadHistory() {
   const who = me.sid;
   try {
-    const list = await store.getMySessions(me);
+    const list = await src.getMySessions(me);
     if (!me || me.sid !== who) return;
     history = list.filter(s => s.date !== today).map(s => ({ ...s, arrows: (s.arrows || []).map(norm) }));
   } catch (err) { console.error(err); history = history || []; toast("지난 기록을 불러오지 못했어요."); }
@@ -698,6 +723,7 @@ function drawMarks() {
 /* 과녁판 누르기: 누른 채로 손가락을 움직여 위치를 맞추고, 떼면 기록 */
 const full = () => arrows.length >= MAX_ARROWS && sel < 0;
 $("tgt").addEventListener("pointerdown", e => {
+  if (viewOnly) return;
   if (todayKST() !== today) { toast("날짜가 바뀌어 오늘 기록을 새로 열어요."); openStudent(me.sid); return; }
   if (full()) return toast(`하루 최대 ${MAX_ARROWS}발까지 기록할 수 있어요. 고치려면 아래 화살을 눌러 고르세요.`);
   e.preventDefault();
@@ -733,7 +759,7 @@ $("missBtn").onclick = () => {
   addOrReplace({ k: "M" });
 };
 $("arrows").onclick = e => {
-  const i = e.target.dataset.i; if (i === undefined) return;
+  const i = e.target.dataset.i; if (i === undefined || viewOnly) return;
   sel = (sel === +i) ? -1 : +i; drawScore();
 };
 $("undoBtn").onclick = () => {
@@ -786,7 +812,8 @@ function drawScore() {
   $("tgt").classList.toggle("off", isFull);
   $("missBtn").disabled = isFull;
   const histN = markMode === "all" && history ? history.reduce((n, s) => n + s.arrows.length, 0) : 0;
-  $("editHint").textContent = sel >= 0 ? `${sel+1}번째 화살을 고치는 중 — 과녁에서 맞은 자리를 다시 누르거나 [지우기]를 누르세요.`
+  $("editHint").textContent = viewOnly ? `이 학생이 이날 기록한 화살이에요.` + (markMode === "all" ? ` (회색 X = 다른 날 기록 ${histN}발)` : "")
+                            : sel >= 0 ? `${sel+1}번째 화살을 고치는 중 — 과녁에서 맞은 자리를 다시 누르거나 [지우기]를 누르세요.`
                             : isFull ? `오늘 ${MAX_ARROWS}발을 모두 기록했어요. 고치려면 아래 점수 동그라미를 눌러 고르세요.`
                             : `화살이 맞은 자리를 누르세요. 누른 채로 움직이면 위치를 맞출 수 있어요.` +
                               (markMode === "all" ? ` (회색 X = 지난 기록 ${histN}발)` : "");
@@ -798,6 +825,7 @@ function drawScore() {
 /* 누를 때마다 0.6초 뒤 자동 저장 (빨리 연달아 눌러도 한 번만 저장) */
 let saveTimer = null, saving = Promise.resolve();
 function saveSoon() {
+  if (viewOnly) return;
   $("saveState").textContent = "저장 중…";
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -824,7 +852,7 @@ const fmtDateLong = d => { const [y, m, dd] = d.split("-").map(Number); return `
 async function loadBoard() {
   if (!me) return;
   try {
-    const b = await store.getBoard(me.cls);
+    const b = await src.getBoard(me.cls);
     b.names.forEach(s => classNames[s.sid] = s.name);
     board = { cls: b.cls.filter(s => s.count > 0), pub: b.pub.filter(p => p.count > 0) };
     drawBoard();
@@ -832,7 +860,10 @@ async function loadBoard() {
 }
 let boardTimer = null;
 function boardSoon() { clearTimeout(boardTimer); boardTimer = setTimeout(loadBoard, REMOTE ? 8000 : 1500); }   // 서버를 쓸 때는 덜 자주 불러 와요
-$("refreshBtn").onclick = () => { loadBoard(); toast("최신 기록으로 바꿨어요."); };
+$("refreshBtn").onclick = async () => {
+  if (viewOnly) { await loadTeacherData(); await openStudent(me.sid, today); return toast("최신 기록으로 바꿨어요."); }
+  loadBoard(); toast("최신 기록으로 바꿨어요.");
+};
 setInterval(() => { if (!$("vStudent").classList.contains("hidden") && !document.hidden) loadBoard(); }, REMOTE ? 90000 : 30000);
 
 $("boardTabs").onclick = e => {
@@ -1304,14 +1335,18 @@ function drawTeacherRec() {
   $("tRecBox").innerHTML = `<table class="rk tbl-s"><thead><tr><th>학번</th><th>이름</th><th>발</th><th>합계</th><th>X</th><th>평균</th><th>반 순위</th><th>전체</th><th>점수</th><th></th></tr></thead><tbody>` +
     roster.map(st => {
       const r = bySid[st.sid];
-      if (!r || !r.count) return `<tr><td>${esc(st.sid)}</td><td>${esc(st.name)}</td><td colspan="7" class="small">기록 없음</td><td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">입력</button></td></tr>`;
-      return `<tr><td>${esc(st.sid)}</td><td>${esc(st.name)}</td><td class="num">${r.count}</td><td class="num">${r.total}</td><td class="num">${r.xs || 0}</td>
+      const nm = `<button class="pv-name" data-view="${esc(st.sid)}">${esc(st.name)}</button>`;
+      if (!r || !r.count) return `<tr><td>${esc(st.sid)}</td><td>${nm}</td><td colspan="7" class="small">기록 없음</td><td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">입력</button></td></tr>`;
+      return `<tr><td>${esc(st.sid)}</td><td>${nm}</td><td class="num">${r.count}</td><td class="num">${r.total}</td><td class="num">${r.xs || 0}</td>
         <td class="num"><b>${r.avg.toFixed(2)}</b></td><td class="num">${rankIn[st.sid] ?? "–"}</td><td class="num">${allRank[st.sid] ?? "–"}</td>
         <td class="scores">${r.arrows.map(a => a.k).join(" ")}</td>
         <td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">고치기</button></td></tr>`;
     }).join("") + `</tbody></table>`;
 }
-$("tRecBox").onclick = e => { const sid = e.target.dataset.ed; if (sid) openEditor(sid); };
+$("tRecBox").onclick = e => {
+  const v = e.target.closest("[data-view]")?.dataset.view; if (v) return openView(v, tDateSel);
+  const sid = e.target.dataset.ed; if (sid) openEditor(sid);
+};
 
 function teacherDaily() {   // 날짜·반별 평균 (선생님은 이름 있는 기록을 모두 볼 수 있음)
   const m = {};
@@ -1336,8 +1371,41 @@ function drawTeacherAvg() {
 }
 window.addEventListener("resize", () => { if (tPane === "avg" && !$("vTeacher").classList.contains("hidden")) drawTeacherAvg(); });
 
+/* ---------- 선생님 보기 모드: 학생 이름을 누르면 그 학생 화면을 그대로(읽기 전용) 보기 ---------- */
+function applyViewMode() {
+  $("viewBar").classList.toggle("hidden", !viewOnly);
+  $("meHint").classList.toggle("hidden", viewOnly);
+  $("logoutBtn").classList.toggle("hidden", viewOnly);
+  $("editRow").classList.toggle("hidden", viewOnly);
+  $("tgt").classList.toggle("view", viewOnly);
+  $("markMode").querySelector('[data-m="today"]').textContent = viewOnly ? "이날 화살만" : "오늘 화살만";
+}
+async function openView(sid, date) {
+  if (!T.students[sid]) { await loadTeacherData(); if (!T.students[sid]) return toast("학생 정보를 찾지 못했어요."); }
+  const t0 = todayKST();
+  const recDates = [...new Set(T.sessions.filter(x => x.sid === sid && x.count > 0).map(x => x.date))].sort().reverse();
+  const dates = recDates.includes(t0) ? recDates : [t0, ...recDates];
+  const day = date && dates.includes(date) ? date : (recDates[0] || t0);   // 기본: 가장 최근에 기록한 날
+  $("viewDate").innerHTML = dates.map(d => {
+    const r = T.sessions.find(x => x.sid === sid && x.date === d);
+    return `<option value="${d}" ${d === day ? "selected" : ""}>${fmtDateLong(d)}${d === t0 ? " · 오늘" : ""} — ${r?.count ? `${r.count}발 · 평균 ${r.avg.toFixed(2)}` : "기록 없음"}</option>`;
+  }).join("");
+  viewOnly = true;
+  app$.classList.remove("wide");
+  try { await openStudent(sid, day); } catch (e) { console.error(e); toast("학생 화면을 열지 못했어요."); return closeView(); }
+  window.scrollTo(0, 0);
+}
+function closeView() {
+  viewOnly = false; me = null; history = null;
+  app$.classList.add("wide");
+  show("vTeacher");
+  drawTeacher();
+}
+$("viewBack").onclick = closeView;
+$("viewDate").onchange = e => { if (me) openStudent(me.sid, e.target.value).then(() => window.scrollTo(0, 0)); };
+
 /* ---------- 선생님: 학생별 향상도 ---------- */
-let pgClass = 1, tProg = null;
+let pgClass = 1;
 $("pgClassTabs").onclick = e => { const c = e.target.dataset.c; if (c === undefined) return; pgClass = +c; drawTeacherProg(); };
 $("pgSort").onchange = () => drawTeacherProg();
 function spark(values) {   // 작은 꺾은선 (한 발 평균 추이)
@@ -1370,7 +1438,7 @@ function drawTeacherProg() {
   if (!rows.length) { $("pgBox").innerHTML = `<p class="small center">명단이 없어요. [명단·비밀번호] 탭에서 명단을 먼저 넣어 주세요.</p>`; return; }
   $("pgBox").innerHTML = `<table class="rk tbl-s"><thead><tr><th>학번</th><th>이름</th><th>기록일</th><th>처음</th><th>최근</th><th>향상</th><th>노랑(9~X)</th><th>추이</th></tr></thead><tbody>` +
     rows.map(r => {
-      const name = r.ses.length ? `<button class="pv-name" data-pv="${esc(r.st.sid)}">${esc(r.st.name)}</button>` : esc(r.st.name);
+      const name = `<button class="pv-name" data-pv="${esc(r.st.sid)}">${esc(r.st.name)}</button>`;
       if (!r.fl) return `<tr><td>${esc(r.st.sid)}</td><td>${name}</td><td class="num">${r.ses.length}</td><td colspan="5" class="small">${r.ses.length ? "2회 이상 기록하면 비교해요" : "기록 없음"}</td></tr>`;
       const dg = r.fl.last.gold - r.fl.first.gold;
       return `<tr><td>${esc(r.st.sid)}</td><td>${name}</td><td class="num">${r.ses.length}</td>
@@ -1380,16 +1448,7 @@ function drawTeacherProg() {
         <td>${spark(r.per)}</td></tr>`;
     }).join("") + `</tbody></table>`;
 }
-$("pgBox").onclick = e => {
-  const sid = e.target.closest("[data-pv]")?.dataset.pv; if (!sid) return;
-  const st = T.students[sid];
-  $("pvTitle").textContent = `${st.name} (${st.sid}) · 누가 기록`;
-  $("pvModal").classList.remove("hidden");
-  tProg ||= makeProgress($("pvBody"));
-  tProg.set(T.sessions.filter(x => x.sid === sid));
-};
-$("pvClose").onclick = () => $("pvModal").classList.add("hidden");
-$("pvModal").onclick = e => { if (e.target === $("pvModal")) $("pvModal").classList.add("hidden"); };
+$("pgBox").onclick = e => { const sid = e.target.closest("[data-pv]")?.dataset.pv; if (sid) openView(sid); };
 
 /* ---------- 선생님: 기록 고치기 창 ---------- */
 let ED = null;   // { stu, date, arrows, sel }
@@ -1487,11 +1546,12 @@ async function loadRoster() {
     $("rosterBox").innerHTML = `
       <div class="small">${curClass}반 · ${list.length}명 — 비밀번호를 바꾸려면 칸을 고치고 [저장]을 누르세요.</div>
       <table><thead><tr><th>번호</th><th>학번</th><th>이름</th><th>비밀번호</th><th></th></tr></thead><tbody>
-      ${list.map(s => `<tr><td>${s.no}</td><td>${esc(s.sid)}</td><td>${esc(s.name)}</td>
+      ${list.map(s => `<tr><td>${s.no}</td><td>${esc(s.sid)}</td><td><button class="pv-name" data-view="${esc(s.sid)}">${esc(s.name)}</button></td>
         <td><input data-sid="${esc(s.sid)}" value="${esc(s.pin)}" maxlength="4" inputmode="numeric"></td>
         <td><button class="mini save" data-save="${esc(s.sid)}">저장</button></td></tr>`).join("")}
       </tbody></table>`;
     $("rosterBox").onclick = async e => {
+      const vw = e.target.closest("[data-view]")?.dataset.view; if (vw) return openView(vw);
       const sid = e.target.dataset.save; if (!sid) return;
       const v = $("rosterBox").querySelector(`input[data-sid="${sid}"]`).value.trim();
       if (!/^\d{4}$/.test(v)) return toast("비밀번호는 숫자 4자리로 적어 주세요.");
