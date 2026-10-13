@@ -122,6 +122,27 @@
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--black);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;z-index:9;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:1}
   .loading{color:var(--muted);text-align:center;padding:40px 0}
+  /* 누가 기록 · 향상도 */
+  .stats.four{grid-template-columns:repeat(4,1fr)}
+  .stats.four span{font-size:20px}
+  .chip.pv-d{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;font-size:13px}
+  .chip.pv-d i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .chip.pv-d.on{background:#fff;color:var(--ink);border-color:var(--c);box-shadow:0 0 0 1.5px var(--c) inset}
+  .pv-chk{display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;color:var(--muted);margin:8px 0 0;cursor:pointer}
+  .pv-chk input{width:auto;margin:0}
+  .pv-svg{display:block;width:100%;height:auto;touch-action:manipulation;cursor:pointer}
+  .chart-svg{display:block;width:100%;height:240px;touch-action:pan-y}
+  .pv-cmp{display:grid;grid-template-columns:1fr auto 1fr 1fr;gap:8px;align-items:center;margin:4px 0 8px}
+  .pv-cmp>div{background:#f4f0e6;border-radius:12px;padding:8px 4px;text-align:center}
+  .pv-cmp>div.arrow{background:none;color:var(--muted);font-size:20px;padding:0}
+  .pv-cmp span{display:block;font-size:22px;font-weight:800;line-height:1.2}
+  .pv-cmp small{color:var(--muted);font-size:12px}
+  .pv-cmp .up{background:#e3f1ea;color:var(--green)}
+  .pv-cmp .down{background:#fbe7e3;color:var(--red)}
+  .up-t{color:var(--green);font-weight:700}
+  .down-t{color:var(--red);font-weight:700}
+  .spark{width:90px;height:26px;display:block;margin:auto}
+  .pv-name{background:none;border:none;padding:0;color:var(--green);font-weight:700;text-decoration:underline;font-size:inherit}
 </style>
 </head>
 <body>
@@ -201,6 +222,12 @@
       <div id="arrows" class="arrows" style="margin-top:14px"></div>
     </div>
 
+    <!-- 누가 기록: 지금까지 쏜 화살 + 향상도 -->
+    <div class="card" style="margin-top:12px">
+      <div class="bar"><b>🎯 나의 누가 기록</b><span class="small">지금까지 쏜 화살이 모두 모여요</span></div>
+      <div id="myProg" style="margin-top:10px"></div>
+    </div>
+
     <!-- 3단계: 그래프와 순위 -->
     <div class="card" style="margin-top:12px" id="boardCard">
       <div class="bar">
@@ -244,6 +271,7 @@
       <div class="tabs" id="tTabs" style="margin-top:14px">
         <button class="chip on" data-p="rec">📋 날짜별 기록</button>
         <button class="chip" data-p="avg">📈 반별 평균</button>
+        <button class="chip" data-p="prog">📊 향상도</button>
         <button class="chip" data-p="roster">👥 명단·비밀번호</button>
         <button class="chip" data-p="backup">💾 백업</button>
       </div>
@@ -270,6 +298,22 @@
       <div class="chart-wrap"><div class="tip hidden" id="tTip"></div><svg id="tChart"></svg></div>
       <div class="small" id="tChartNote"></div>
       <div id="tAvgTable" style="overflow-x:auto;margin-top:10px"></div>
+    </div>
+
+    <!-- 학생별 향상도 -->
+    <div class="card t-pane hidden" id="pProg" style="margin-top:12px">
+      <div class="bar">
+        <b>학생별 향상도</b>
+        <select id="pgSort" class="date-sel">
+          <option value="sid">학번 순</option>
+          <option value="up">향상 큰 순</option>
+          <option value="recent">최근 평균 높은 순</option>
+        </select>
+      </div>
+      <div class="small" style="margin-top:6px">처음 기록한 3회와 최근 3회의 한 발 평균을 비교해요. (기록한 날이 6회보다 적으면 절반씩 비교) 이름을 누르면 그 학생의 누가 과녁과 그래프를 볼 수 있어요.</div>
+      <div class="tabs" id="pgClassTabs" style="margin-top:10px"></div>
+      <div class="small" id="pgSum"></div>
+      <div id="pgBox" style="overflow-x:auto"></div>
     </div>
 
     <!-- 명단·비밀번호 -->
@@ -316,6 +360,12 @@
       <button class="danger" id="edDelAll">이 기록 전체 삭제</button>
       <button class="save" id="edSave">저장</button>
     </div>
+  </div>
+</div>
+<div class="modal hidden" id="pvModal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="bar"><b id="pvTitle"></b><button class="mini line-btn" id="pvClose">닫기</button></div>
+    <div id="pvBody" style="margin-top:10px"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -571,8 +621,22 @@ async function openStudent(sid) {
   setMarkMode("today");
   $("saveState").textContent = rec ? "저장된 기록을 불러왔어요" : "";
   show("vStudent");
+  myProg ||= makeProgress($("myProg"));
   drawScore();
   loadBoard();
+  loadHistory();
+}
+
+/* 지난 기록(오늘 빼고)을 한 번 받아 둠 → 과녁의 "지금까지 모두"와 누가 기록에 씀 */
+let myProg = null;
+async function loadHistory() {
+  const who = me.sid;
+  try {
+    const list = await store.getMySessions(me);
+    if (!me || me.sid !== who) return;
+    history = list.filter(s => s.date !== today).map(s => ({ ...s, arrows: (s.arrows || []).map(norm) }));
+  } catch (err) { console.error(err); history = history || []; toast("지난 기록을 불러오지 못했어요."); }
+  drawScore();
 }
 
 /* ---------- 과녁판 그리기 (세계양궁 10겹 과녁: 1~2 흰색, 3~4 검정, 5~6 파랑, 7~8 빨강, 9~10 노랑) ---------- */
@@ -688,10 +752,7 @@ function setMarkMode(m) {
 $("markMode").onclick = async e => {
   const m = e.target.dataset.m; if (!m) return;
   setMarkMode(m);
-  if (m === "all" && !history) {
-    try { history = (await store.getMySessions(me)).filter(s => s.date !== today); }
-    catch (err) { console.error(err); history = []; toast("지난 기록을 불러오지 못했어요."); }
-  }
+  if (m === "all" && !history) await loadHistory();
   drawScore();
 };
 
@@ -731,6 +792,7 @@ function drawScore() {
                               (markMode === "all" ? ` (회색 X = 지난 기록 ${histN}발)` : "");
   $("undoBtn").textContent = sel >= 0 ? "⌫ 이 화살" : "⌫ 지우기";
   $("cancelSel").classList.toggle("hidden", sel < 0);
+  if (myProg) myProg.set(history ? (r.count ? [...history, r] : history) : null);   // 오늘 화살도 바로 누가 기록에 더함
 }
 
 /* 누를 때마다 0.6초 뒤 자동 저장 (빨리 연달아 눌러도 한 번만 저장) */
@@ -835,24 +897,25 @@ function drawGraph() {
 /* 꺾은선 그래프 그리기 (학생·선생님 화면 공용) */
 function renderChart(ui, dates, series) {
   ui.legend.innerHTML = series.map(s =>
-    `<span><i class="${s.me ? "dot" : ""}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("");
+    `<span><i class="${s.me ? "dot" : ""}" style="background:${s.dash ? `repeating-linear-gradient(90deg,${s.color} 0 4px,transparent 4px 7px)` : s.color}"></i>${esc(s.name)}</span>`).join("");
   const svg = ui.svg, W = Math.max(280, svg.clientWidth || 320), H = 240;
-  const pad = { l: 30, r: ui.labels ? 54 : 14, t: 14, b: 26 };
+  const fmt = ui.fmt || (v => v.toFixed(2)), tick = ui.tick || (v => v);
+  const pad = { l: ui.padL || 30, r: ui.labels ? 54 : 14, t: 14, b: 26 };
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const all = series.flatMap(s => s.values).filter(v => v != null);
   if (!dates.length || !all.length) {
     svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#6b726d" font-size="14">아직 기록이 없어요. 화살을 기록하면 그래프가 생겨요.</text>`;
     ui.note.textContent = ""; ui.table.innerHTML = ""; return false;
   }
-  const yMin = Math.max(0, Math.floor(Math.min(...all)) - 1), yMax = 10;
+  const yMin = ui.yMin ?? Math.max(0, Math.floor(Math.min(...all)) - 1), yMax = ui.yMax ?? 10;
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const X = i => pad.l + (dates.length === 1 ? iw / 2 : i * iw / (dates.length - 1));
   const Y = v => pad.t + (yMax - v) / (yMax - yMin) * ih;
   let g = "";
-  const step = (yMax - yMin) > 6 ? 2 : 1;
+  const step = ui.step || ((yMax - yMin) > 6 ? 2 : 1);
   for (let v = yMin; v <= yMax; v += step)
     g += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e9e4d8" stroke-width="1"/>` +
-         `<text x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#6b726d">${v}</text>`;
+         `<text x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#6b726d">${tick(v)}</text>`;
   const every = Math.ceil(dates.length / Math.max(2, Math.floor(iw / 44)));
   dates.forEach((d, i) => { if (i % every === 0 || i === dates.length - 1)
     g += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6b726d">${fmtDate(d)}</text>`; });
@@ -862,8 +925,8 @@ function renderChart(ui, dates, series) {
     const bold = s.me || (ui.boldMine && s.mine);
     let path = "", pen = false;
     s.values.forEach((v, i) => { if (v == null) { pen = false; return; } path += `${pen ? "L" : "M"}${X(i)} ${Y(v)}`; pen = true; });
-    g += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${bold ? 2.5 : 2}" stroke-linejoin="round" stroke-linecap="round" opacity="${ui.boldMine && !s.mine ? .85 : 1}"/>`;
-    s.values.forEach((v, i) => { if (v != null)
+    g += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${bold ? 2.5 : 2}" stroke-linejoin="round" stroke-linecap="round" opacity="${ui.boldMine && !s.mine ? .85 : 1}"${s.dash ? ` stroke-dasharray="6 5"` : ""}/>`;
+    if (!s.noDots) s.values.forEach((v, i) => { if (v != null)
       g += `<circle cx="${X(i)}" cy="${Y(v)}" r="${bold ? 4.5 : 3.5}" fill="${s.color}" stroke="#fffdf8" stroke-width="2"/>`; });
   });
   if (ui.labels) {   // 선 끝에 이름 붙이기 (두 이름이 겹치면 위아래로 벌림)
@@ -888,9 +951,9 @@ function renderChart(ui, dates, series) {
     let i = dates.length === 1 ? 0 : Math.round((x - pad.l) / iw * (dates.length - 1));
     i = Math.max(0, Math.min(dates.length - 1, i));
     cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
-    const rows = series.map(s => ({ s, v: s.values[i] })).filter(r => r.v != null).sort((a, b) => b.v - a.v);
+    const rows = series.filter(s => !s.noTip).map(s => ({ s, v: s.values[i] })).filter(r => r.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${fmtDateLong(dates[i])}</b>` + (rows.length ? rows.map(r =>
-      `<div><span><i style="background:${r.s.color}"></i>${esc(r.s.name)}</span><span class="num">${r.v.toFixed(2)}</span></div>`).join("") : `<div>기록 없음</div>`);
+      `<div><span><i style="background:${r.s.color}"></i>${esc(r.s.name)}</span><span class="num">${fmt(r.v)}</span></div>`).join("") : `<div>기록 없음</div>`);
     tip.classList.remove("hidden");
     const px = X(i) * b.width / W, tw = tip.offsetWidth;
     tip.style.left = Math.max(0, Math.min(b.width - tw, px + (px > b.width / 2 ? -tw - 12 : 12))) + "px";
@@ -906,6 +969,196 @@ function renderChart(ui, dates, series) {
   return true;
 }
 window.addEventListener("resize", () => { if (me && boardTab === "graph" && !$("vStudent").classList.contains("hidden")) drawGraph(); });
+
+/* =====================================================================
+   누가 기록: 지금까지 쏜 화살을 날짜별 색으로 한 과녁에 모아 보기 + 향상도 그래프
+   학생 화면(내 기록)과 선생님 화면(학생 한 명 자세히)에서 함께 써요.
+   ===================================================================== */
+const DATE_COLORS = ["#e6007e", "#6a3fd8", "#00898c", "#e86f00", "#1f5fbf", "#8a5a00"];   // 가장 최근 날짜부터
+const OLD_COLOR = "#5f6461", MAX_DATE_CHIPS = 12, LABEL_MAX = 30;
+const RANGES = [[1, "최근 1회"], [3, "최근 3회"], [5, "최근 5회"], [0, "전체"]];
+const pct = v => v == null ? "–" : Math.round(v) + "%";
+
+/* 화살 묶음의 적중률: 과녁 적중(M 아님) · 빨강 이상(7점+) · 노랑(9~X) */
+function arrowStats(list) {
+  const n = list.length;
+  if (!n) return { n: 0, avg: null, hit: null, red: null, gold: null };
+  const rate = f => list.filter(f).length / n * 100, total = list.reduce((t, a) => t + pts(a.k), 0);
+  return { n, total, avg: total / n, hit: rate(a => a.k !== "M"), red: rate(a => pts(a.k) >= 7), gold: rate(a => pts(a.k) >= 9) };
+}
+/* 처음 몇 회와 최근 몇 회 비교 (최대 3회씩, 기록한 날이 적으면 절반씩) */
+function firstLast(sessions) {
+  const n = sessions.length; if (n < 2) return null;
+  const k = Math.min(3, Math.floor(n / 2)), pool = l => arrowStats(l.flatMap(s => s.arrows));
+  return { k, first: pool(sessions.slice(0, k)), last: pool(sessions.slice(-k)) };
+}
+/* 추세선 (최소제곱 직선) — 기록한 날이 3회 이상일 때 */
+function trendLine(values) {
+  const p = values.map((v, i) => [i, v]).filter(q => q[1] != null);
+  if (p.length < 3) return null;
+  const n = p.length, mx = p.reduce((t, q) => t + q[0], 0) / n, my = p.reduce((t, q) => t + q[1], 0) / n;
+  const sxx = p.reduce((t, q) => t + (q[0] - mx) ** 2, 0), sxy = p.reduce((t, q) => t + (q[0] - mx) * (q[1] - my), 0);
+  const b = sxx ? sxy / sxx : 0, a = my - b * mx;
+  return { slope: b, values: values.map((_, i) => r2(a + b * i)) };
+}
+const cleanSessions = list => (list || []).map(x => ({ ...x, arrows: (x.arrows || []).map(norm) }))
+  .filter(x => x.arrows.length).sort((a, b) => a.date < b.date ? -1 : 1);
+
+function makeProgress(root) {
+  root.innerHTML = `
+    <div class="seg pv-tabs" style="margin:0 0 12px">
+      <button class="on" data-pt="tgt">🎯 누가 과녁</button>
+      <button data-pt="graph">📈 향상도 그래프</button>
+    </div>
+    <div class="pv-empty small center hidden"></div>
+    <div class="pv-tgt">
+      <div class="tabs pv-range" style="margin:0 0 8px"></div>
+      <div class="tgt-wrap"><div class="tip hidden pv-tip"></div>
+        <svg class="pv-svg" viewBox="-1.12 -1.12 2.24 2.24" aria-label="지금까지 쏜 화살을 날짜별 색으로 모은 과녁"></svg></div>
+      <label class="pv-chk"><input type="checkbox" class="pv-lab" checked> 화살마다 날짜 표시</label>
+      <div class="small pv-scope" style="margin-top:10px"></div>
+      <div class="tabs pv-dates" style="margin:6px 0 0"></div>
+      <div class="stats four pv-stats"></div>
+      <div class="note pv-hint" style="margin-top:0"></div>
+    </div>
+    <div class="pv-graph hidden">
+      <div class="pv-sum"></div>
+      <div class="sec-title">한 발 평균 (날짜별)</div>
+      <div class="legend pv-l1"></div>
+      <div class="chart-wrap"><div class="tip hidden pv-t1"></div><svg class="chart-svg pv-c1"></svg></div>
+      <div class="small pv-n1"></div>
+      <div class="sec-title">적중률 (날짜별, %)</div>
+      <div class="legend pv-l2"></div>
+      <div class="chart-wrap"><div class="tip hidden pv-t2"></div><svg class="chart-svg pv-c2"></svg></div>
+      <div class="small pv-n2"></div>
+      <details class="tbl"><summary>표로 보기</summary><div class="pv-table" style="overflow-x:auto"></div></details>
+    </div>`;
+  const q = c => root.querySelector("." + c), face = $("tgt").querySelector("#face").innerHTML;
+  const st = { sessions: null, range: 3, hl: "", labels: true, tab: "tgt" };
+  let shown = [];
+  const hideTip = () => q("pv-tip").classList.add("hidden");
+
+  root.querySelector(".pv-tabs").onclick = e => { const t = e.target.dataset.pt; if (!t) return; st.tab = t; draw(); };
+  q("pv-range").onclick = e => { const r = e.target.dataset.r; if (r === undefined) return; st.range = +r; st.hl = ""; hideTip(); draw(); };
+  q("pv-dates").onclick = e => { const d = e.target.closest("[data-d]")?.dataset.d; if (!d) return; st.hl = st.hl === d ? "" : d; hideTip(); draw(); };
+  q("pv-lab").onchange = e => { st.labels = e.target.checked; draw(); };
+  /* 화살을 누르면 그 화살의 날짜·점수를 보여 주고, 그날 화살만 진하게 */
+  const svg = q("pv-svg");
+  svg.onpointerdown = e => {
+    const b = svg.getBoundingClientRect(), tip = q("pv-tip");
+    const x = (e.clientX - b.left) / b.width * 2.24 - 1.12, y = (e.clientY - b.top) / b.height * 2.24 - 1.12;
+    let best = null, bd = 0.09;
+    shown.forEach(m => { const d = Math.hypot(m.a.x - x, m.a.y - y); if (d < bd) { bd = d; best = m; } });
+    if (!best) { hideTip(); if (st.hl) { st.hl = ""; draw(); } return; }
+    st.hl = best.date; draw();
+    tip.innerHTML = `<b>${fmtDateLong(best.date)}</b><div><span>${best.no}번째 화살</span><span class="num"><b style="display:inline;margin:0">${best.a.k === "X" ? "X (10점)" : best.a.k + "점"}</b></span></div>`;
+    tip.classList.remove("hidden");
+    const px = (best.a.x + 1.12) / 2.24 * b.width, py = (best.a.y + 1.12) / 2.24 * b.height;
+    tip.style.left = Math.max(0, Math.min(b.width - tip.offsetWidth, px - tip.offsetWidth / 2)) + "px";
+    tip.style.top = (py - tip.offsetHeight - 14 < 0 ? py + 18 : py - tip.offsetHeight - 14) + "px";
+  };
+
+  function draw() {
+    root.querySelectorAll(".pv-tabs button").forEach(b => b.classList.toggle("on", b.dataset.pt === st.tab));
+    const all = st.sessions, empty = !all || !all.length;
+    q("pv-empty").classList.toggle("hidden", !empty);
+    q("pv-empty").textContent = !all ? "지난 기록 불러오는 중…" : "아직 기록이 없어요. 화살을 기록하면 여기에 모두 모여요.";
+    q("pv-tgt").classList.toggle("hidden", empty || st.tab !== "tgt");
+    q("pv-graph").classList.toggle("hidden", empty || st.tab !== "graph");
+    if (empty) return;
+    if (st.tab === "tgt") drawTarget(all); else drawGraphs(all);
+  }
+
+  function drawTarget(all) {
+    q("pv-range").innerHTML = RANGES.map(([r, t]) => `<button class="chip ${r === st.range ? "on" : ""}" data-r="${r}">${t}</button>`).join("");
+    const list = st.range ? all.slice(-st.range) : all;
+    if (st.hl && !list.some(x => x.date === st.hl)) st.hl = "";
+    const color = {};
+    [...list].reverse().forEach((x, i) => color[x.date] = DATE_COLORS[i] || OLD_COLOR);
+    const recent = [...list].reverse();
+    q("pv-dates").innerHTML = recent.slice(0, MAX_DATE_CHIPS).map(x =>
+      `<button class="chip pv-d ${st.hl === x.date ? "on" : ""}" data-d="${x.date}" style="--c:${color[x.date]}"><i style="background:${color[x.date]}"></i>${fmtDate(x.date)} · ${x.arrows.length}발</button>`).join("") +
+      (recent.length > MAX_DATE_CHIPS ? `<span class="small" style="align-self:center">그 전 ${recent.length - MAX_DATE_CHIPS}회는 회색</span>` : "");
+
+    // 고른 날 화살을 맨 위에 그림 (나머지는 오래된 것부터)
+    const order = [...list].sort((a, b) => (a.date === st.hl) - (b.date === st.hl));
+    let marks = "", labels = "";
+    shown = [];
+    // 화살이 너무 많으면 글씨가 겹쳐 안 보이므로, 날짜를 골랐을 때만 날짜 글씨를 씀
+    const onCount = order.filter(x => !st.hl || st.hl === x.date).reduce((t, x) => t + x.arrows.filter(a => a.x !== undefined).length, 0);
+    const labelOn = st.labels && (st.hl || onCount <= LABEL_MAX);
+    order.forEach(x => {
+      const on = !st.hl || st.hl === x.date, c = color[x.date];
+      x.arrows.forEach((a, i) => {
+        if (a.x === undefined) return;                 // M(위치 없음)·선생님이 고친 화살은 과녁에 없음
+        shown.push({ a, date: x.date, no: i + 1 });
+        if (!on) { marks += xMark(a.x, a.y, { size: 0.03, color: c, w: 0.01, opacity: 0.25 }); return; }
+        marks += xMark(a.x, a.y, { size: st.hl ? 0.05 : 0.04, color: c, w: st.hl ? 0.016 : 0.013 });
+        if (labelOn) labels += `<text x="${a.x + 0.045}" y="${a.y - 0.035}" font-size="${st.hl ? 0.058 : 0.046}" font-weight="800" fill="${c}" stroke="#fff" stroke-width="0.016" paint-order="stroke" pointer-events="none">${fmtDate(x.date)}</text>`;
+      });
+    });
+
+    // 적중률과 탄착군 (고른 날이 있으면 그날만)
+    const scope = st.hl ? list.filter(x => x.date === st.hl) : list, flat = scope.flatMap(x => x.arrows), sa = arrowStats(flat);
+    q("pv-scope").innerHTML = `<b style="color:var(--ink)">${st.hl ? fmtDateLong(st.hl) : st.range ? `최근 ${list.length}회` : `전체 ${list.length}회`}</b> · 화살 ${sa.n}발` +
+      (st.hl ? " · 다시 누르면 전체로" : " · 날짜를 누르면 그날 화살만 진하게 보여요") +
+      (st.labels && !labelOn ? `<br>화살이 ${LABEL_MAX}발보다 많아 날짜 글씨는 숨겼어요. 날짜를 고르거나 과녁의 화살을 누르면 보여요.` : "");
+    q("pv-stats").innerHTML = `<div><span>${pct(sa.hit)}</span><small>과녁 적중</small></div><div><span>${pct(sa.red)}</span><small>빨강 이상</small></div>` +
+      `<div><span>${pct(sa.gold)}</span><small>노랑(9~X)</small></div><div class="hl"><span>${sa.n ? sa.avg.toFixed(2) : "–"}</span><small>한 발 평균</small></div>`;
+    const pos = flat.filter(a => a.x !== undefined && a.k !== "M");
+    let grp = "", hint;
+    if (pos.length >= 6) {
+      const cx = pos.reduce((t, a) => t + a.x, 0) / pos.length, cy = pos.reduce((t, a) => t + a.y, 0) / pos.length;
+      const spread = pos.reduce((t, a) => t + Math.hypot(a.x - cx, a.y - cy), 0) / pos.length;
+      const plus = `M${cx - 0.06} ${cy}H${cx + 0.06}M${cx} ${cy - 0.06}V${cy + 0.06}`;
+      grp = `<circle cx="${cx}" cy="${cy}" r="${spread}" fill="none" stroke="#fff" stroke-width="0.026" opacity=".9" pointer-events="none"/>` +
+            `<circle cx="${cx}" cy="${cy}" r="${spread}" fill="none" stroke="#2f5d50" stroke-width="0.013" stroke-dasharray="0.035 0.022" pointer-events="none"/>` +
+            `<path d="${plus}" stroke="#fff" stroke-width="0.035" stroke-linecap="round" pointer-events="none"/><path d="${plus}" stroke="#2f5d50" stroke-width="0.016" stroke-linecap="round" pointer-events="none"/>`;
+      const off = Math.hypot(cx, cy), h = cx > 0.04 ? "오른쪽" : cx < -0.04 ? "왼쪽" : "", v = cy > 0.04 ? "아래" : cy < -0.04 ? "위" : "";
+      hint = off < 0.08 || !(h || v) ? `화살이 과녁 가운데 근처에 모여 있어요. 👍`
+        : `화살이 가운데에서 <b>${[h, v].filter(Boolean).join(" ")}</b> 쪽으로 평균 ${(off * 10).toFixed(1)}칸 치우쳐 있어요.`;
+      hint += ` 흩어진 정도는 평균 ${(spread * 10).toFixed(1)}칸이에요. <b>초록 +</b>는 화살들의 가운데, <b>초록 점선 원</b>이 작을수록 화살이 고르게 모인 거예요.`;
+    } else hint = "과녁에 찍은 화살이 6발 이상 모이면 화살이 어느 쪽으로 몰리는지 알려 줘요.";
+    q("pv-hint").innerHTML = hint;
+    svg.innerHTML = `<g pointer-events="none">${face}</g><g>${marks}</g>${grp}<g>${labels}</g>`;
+  }
+
+  function drawGraphs(all) {
+    const dates = all.map(x => x.date), per = all.map(x => arrowStats(x.arrows));
+    const avgV = per.map(p => r2(p.avg)), tr = trendLine(avgV);
+    const s1 = [{ key: "avg", name: "한 발 평균", color: ME_COLOR, me: true, values: avgV }];
+    if (tr) s1.push({ key: "tr", name: "추세", color: "#e6007e", dash: true, noDots: true, noTip: true, values: tr.values });
+    renderChart({ svg: q("pv-c1"), tip: q("pv-t1"), legend: q("pv-l1"), table: document.createElement("div"), note: q("pv-n1"), labels: false }, dates, s1);
+    q("pv-n1").textContent = tr ? `추세: 한 번 기록할 때마다 평균 ${tr.slope >= 0 ? "+" : ""}${tr.slope.toFixed(2)}점씩 ${tr.slope >= 0.005 ? "오르고" : tr.slope <= -0.005 ? "내려가고" : "비슷하게 유지되고"} 있어요.`
+                                : "기록한 날이 3회 이상 쌓이면 추세선(분홍 점선)이 생겨요.";
+    const s2 = [
+      { key: "hit", name: "과녁 적중", color: "#2f5d50", values: per.map(p => p.hit) },
+      { key: "red", name: "빨강 이상(7점+)", color: "#d9412b", values: per.map(p => p.red) },
+      { key: "gold", name: "노랑(9~X)", color: "#c99700", values: per.map(p => p.gold) }];
+    renderChart({ svg: q("pv-c2"), tip: q("pv-t2"), legend: q("pv-l2"), table: document.createElement("div"), note: q("pv-n2"), labels: false,
+                  yMin: 0, yMax: 100, step: 20, padL: 40, fmt: v => Math.round(v) + "%", tick: v => v + "%" }, dates, s2);
+    q("pv-n2").textContent = "그래프를 누르면 그날 값이 나와요.";
+
+    const fl = firstLast(all), best = all.map((x, i) => ({ date: x.date, avg: per[i].avg })).sort((a, b) => b.avg - a.avg)[0];
+    if (!fl) q("pv-sum").innerHTML = `<p class="small">기록한 날이 2회 이상 쌓이면 처음과 최근을 비교해 줘요.</p>`;
+    else {
+      const d = fl.last.avg - fl.first.avg, dg = fl.last.gold - fl.first.gold;
+      q("pv-sum").innerHTML = `<div class="pv-cmp"><div><small>처음 ${fl.k}회</small><span>${fl.first.avg.toFixed(2)}</span></div><div class="arrow">→</div>` +
+        `<div><small>최근 ${fl.k}회</small><span>${fl.last.avg.toFixed(2)}</span></div>` +
+        `<div class="${d >= 0 ? "up" : "down"}"><small>향상도</small><span>${d >= 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(2)}</span></div></div>` +
+        `<div class="small">노랑(9~X) 비율 ${pct(fl.first.gold)} → ${pct(fl.last.gold)} (${dg >= 0 ? "+" : ""}${Math.round(dg)}%p) · 최고 기록 ${fmtDateLong(best.date)} ${best.avg.toFixed(2)}점 · 기록한 날 ${all.length}회</div>`;
+    }
+    q("pv-table").innerHTML = `<table><thead><tr><th>날짜</th><th>발</th><th>평균</th><th>과녁 적중</th><th>빨강 이상</th><th>노랑</th></tr></thead><tbody>` +
+      all.map((x, i) => `<tr><td>${fmtDate(x.date)}</td><td class="num">${per[i].n}</td><td class="num"><b>${per[i].avg.toFixed(2)}</b></td><td class="num">${pct(per[i].hit)}</td><td class="num">${pct(per[i].red)}</td><td class="num">${pct(per[i].gold)}</td></tr>`).reverse().join("") +
+      `</tbody></table>`;
+  }
+
+  return {
+    set(list) { st.sessions = list ? cleanSessions(list) : null; hideTip(); draw(); },
+    redraw: draw
+  };
+}
+window.addEventListener("resize", () => { if (myProg && !$("vStudent").classList.contains("hidden")) myProg.redraw(); });
 
 /* ---------- 순위: 그날 한 발 평균이 높은 순 (같으면 합계, 그다음 X 개수) ---------- */
 const rankSort = (a, b) => b.avg - a.avg || b.total - a.total || (b.xs || 0) - (a.xs || 0);
@@ -1006,10 +1259,11 @@ function setPane(p) {
   $("tTabs").querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b.dataset.p === p));
   $("pRec").classList.toggle("hidden", p !== "rec");
   $("pAvg").classList.toggle("hidden", p !== "avg");
+  $("pProg").classList.toggle("hidden", p !== "prog");
   $("pRoster").classList.toggle("hidden", p !== "roster");
   $("pPaste").classList.toggle("hidden", p !== "roster");
   $("pBackup").classList.toggle("hidden", p !== "backup");
-  if (p === "roster") loadRoster(); else if (p === "rec" || p === "avg") loadTeacherData();
+  if (p === "roster") loadRoster(); else if (p === "rec" || p === "avg" || p === "prog") loadTeacherData();
 }
 
 /* ---------- 선생님: 전체 기록 ---------- */
@@ -1027,7 +1281,7 @@ $("tRefresh").onclick = () => { loadTeacherData(); toast("최신 기록으로 �
 $("tDate").onchange = e => { tDateSel = e.target.value; drawTeacher(); };
 $("tClassTabs").onclick = e => { const c = e.target.dataset.c; if (c === undefined) return; tClassSel = +c; drawTeacher(); };
 
-function drawTeacher() { if (tPane === "rec") drawTeacherRec(); else if (tPane === "avg") drawTeacherAvg(); }
+function drawTeacher() { if (tPane === "rec") drawTeacherRec(); else if (tPane === "avg") drawTeacherAvg(); else if (tPane === "prog") drawTeacherProg(); }
 
 function drawTeacherRec() {
   const today0 = todayKST();
@@ -1081,6 +1335,61 @@ function drawTeacherAvg() {
         <td class="num"><b>${all.n ? (all.t / all.n).toFixed(2) : "–"}</b></td></tr>`; }).join("") + `</tbody></table>` : `<p class="small center">아직 기록이 없어요.</p>`;
 }
 window.addEventListener("resize", () => { if (tPane === "avg" && !$("vTeacher").classList.contains("hidden")) drawTeacherAvg(); });
+
+/* ---------- 선생님: 학생별 향상도 ---------- */
+let pgClass = 1, tProg = null;
+$("pgClassTabs").onclick = e => { const c = e.target.dataset.c; if (c === undefined) return; pgClass = +c; drawTeacherProg(); };
+$("pgSort").onchange = () => drawTeacherProg();
+function spark(values) {   // 작은 꺾은선 (한 발 평균 추이)
+  const v = values.filter(x => x != null);
+  if (v.length < 2) return `<span class="small">–</span>`;
+  const lo = Math.min(...v), hi = Math.max(...v), W = 90, H = 26, span = hi - lo || 1;
+  const X = i => 3 + i * (W - 6) / (values.length - 1), Y = x => H - 3 - (x - lo) / span * (H - 6);
+  const d = values.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(x).toFixed(1)}`).join("");
+  const up = v[v.length - 1] >= v[0];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}"><path d="${d}" fill="none" stroke="${up ? "#2f5d50" : "#d9412b"}" stroke-width="1.8" stroke-linejoin="round"/>` +
+         `<circle cx="${X(values.length - 1)}" cy="${Y(values[values.length - 1])}" r="2.6" fill="${up ? "#2f5d50" : "#d9412b"}"/></svg>`;
+}
+function drawTeacherProg() {
+  $("pgClassTabs").innerHTML = [0, ...CLASSES].map(c => `<button class="chip ${c === pgClass ? "on" : ""}" data-c="${c}">${c ? c + "반" : "전체"}</button>`).join("");
+  const bySid = {};
+  cleanSessions(T.sessions).forEach(x => (bySid[x.sid] ||= []).push(x));
+  const rows = Object.values(T.students).filter(st => !pgClass || st.cls === pgClass).map(st => {
+    const ses = bySid[st.sid] || [], fl = firstLast(ses);
+    return { st, ses, fl, diff: fl ? fl.last.avg - fl.first.avg : null,
+             recent: ses.length ? arrowStats(ses.slice(-3).flatMap(x => x.arrows)).avg : null,
+             per: ses.map(x => arrowStats(x.arrows).avg) };
+  });
+  const sort = $("pgSort").value, num = v => v == null ? -99 : v;
+  rows.sort(sort === "up" ? (a, b) => num(b.diff) - num(a.diff) || a.st.sid.localeCompare(b.st.sid)
+          : sort === "recent" ? (a, b) => num(b.recent) - num(a.recent) || a.st.sid.localeCompare(b.st.sid)
+          : (a, b) => a.st.sid.localeCompare(b.st.sid));
+  const cmp = rows.filter(r => r.fl), up = cmp.filter(r => r.diff > 0);
+  $("pgSum").innerHTML = rows.length ? `${pgClass ? pgClass + "반" : "전체"} ${rows.length}명 · 비교할 수 있는 학생 ${cmp.length}명 중 <b>${up.length}명 향상</b>` +
+    (cmp.length ? ` · 평균 변화 <b class="${cmp.reduce((t, r) => t + r.diff, 0) >= 0 ? "up-t" : "down-t"}">${(t => (t >= 0 ? "+" : "") + t.toFixed(2))(cmp.reduce((t, r) => t + r.diff, 0) / cmp.length)}점</b>` : "") : "";
+  if (!rows.length) { $("pgBox").innerHTML = `<p class="small center">명단이 없어요. [명단·비밀번호] 탭에서 명단을 먼저 넣어 주세요.</p>`; return; }
+  $("pgBox").innerHTML = `<table class="rk tbl-s"><thead><tr><th>학번</th><th>이름</th><th>기록일</th><th>처음</th><th>최근</th><th>향상</th><th>노랑(9~X)</th><th>추이</th></tr></thead><tbody>` +
+    rows.map(r => {
+      const name = r.ses.length ? `<button class="pv-name" data-pv="${esc(r.st.sid)}">${esc(r.st.name)}</button>` : esc(r.st.name);
+      if (!r.fl) return `<tr><td>${esc(r.st.sid)}</td><td>${name}</td><td class="num">${r.ses.length}</td><td colspan="5" class="small">${r.ses.length ? "2회 이상 기록하면 비교해요" : "기록 없음"}</td></tr>`;
+      const dg = r.fl.last.gold - r.fl.first.gold;
+      return `<tr><td>${esc(r.st.sid)}</td><td>${name}</td><td class="num">${r.ses.length}</td>
+        <td class="num">${r.fl.first.avg.toFixed(2)}</td><td class="num"><b>${r.fl.last.avg.toFixed(2)}</b></td>
+        <td class="num ${r.diff >= 0 ? "up-t" : "down-t"}">${r.diff >= 0 ? "▲" : "▼"} ${Math.abs(r.diff).toFixed(2)}</td>
+        <td class="num">${pct(r.fl.first.gold)} → ${pct(r.fl.last.gold)}<div class="small ${dg >= 0 ? "up-t" : "down-t"}">${dg >= 0 ? "+" : ""}${Math.round(dg)}%p</div></td>
+        <td>${spark(r.per)}</td></tr>`;
+    }).join("") + `</tbody></table>`;
+}
+$("pgBox").onclick = e => {
+  const sid = e.target.closest("[data-pv]")?.dataset.pv; if (!sid) return;
+  const st = T.students[sid];
+  $("pvTitle").textContent = `${st.name} (${st.sid}) · 누가 기록`;
+  $("pvModal").classList.remove("hidden");
+  tProg ||= makeProgress($("pvBody"));
+  tProg.set(T.sessions.filter(x => x.sid === sid));
+};
+$("pvClose").onclick = () => $("pvModal").classList.add("hidden");
+$("pvModal").onclick = e => { if (e.target === $("pvModal")) $("pvModal").classList.add("hidden"); };
 
 /* ---------- 선생님: 기록 고치기 창 ---------- */
 let ED = null;   // { stu, date, arrows, sel }
