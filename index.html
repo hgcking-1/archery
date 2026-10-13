@@ -53,9 +53,19 @@
   .stats small{color:var(--muted);font-size:12px}
   .stats .hl{background:var(--green);color:#fff}.stats .hl small{color:#d5e6de}
   .arrows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;min-height:10px}
-  .end{display:grid;grid-template-columns:34px repeat(6,1fr);gap:5px;align-items:center}
+  .end{display:grid;grid-template-columns:34px repeat(6,1fr) 54px;gap:5px;align-items:center}
   .end .lab{font-size:11px;color:var(--muted)}
-  .ar{height:38px;border-radius:50%;aspect-ratio:1;justify-self:center;display:grid;place-items:center;font-weight:800;font-size:15px;border:2px solid transparent;padding:0}
+  .end-head{font-size:11px;color:var(--muted);margin-bottom:-2px}
+  .end-head span:last-child{text-align:center}
+  .esum{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;border-radius:10px;background:#f4f0e6;padding:4px 0;min-height:38px}
+  .esum b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+  .esum small{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .esum.done{background:var(--green);color:#fff}
+  .esum.done small{color:#d5e6de}
+  .esum.empty{background:transparent;border:1.5px dashed var(--line);color:var(--muted)}
+  .scores .e{white-space:nowrap}
+  .scores .e b{color:var(--ink)}
+  .ar{width:min(38px,100%);height:auto;border-radius:50%;aspect-ratio:1;justify-self:center;display:grid;place-items:center;font-weight:800;font-size:15px;border:2px solid transparent;padding:0}
   .ar.empty{border:1.5px dashed var(--line);background:transparent}
   .ar.sel{outline:3px solid var(--green);outline-offset:2px}
   .tgt-wrap{position:relative;max-width:420px;margin:6px auto 0}
@@ -393,6 +403,15 @@ const randomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), b 
 const todayKST = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });   // 예: 2026-10-07
 const MAX_ARROWS = 30, PER_END = 6;
 const pts = k => k === "X" ? 10 : k === "M" ? 0 : Number(k);
+/* 엔드(6발)별 합계와 누계 */
+const endHead = () => `<div class="end end-head"><span></span>${"<span></span>".repeat(PER_END)}<span>엔드 합</span></div>`;
+function endSumCell(list, e) {
+  const part = list.slice(e * PER_END, (e + 1) * PER_END);
+  if (!part.length) return `<span class="esum empty">–</span>`;
+  const sum = part.reduce((t, a) => t + pts(a.k), 0), run = list.slice(0, (e + 1) * PER_END).reduce((t, a) => t + pts(a.k), 0);
+  return `<span class="esum ${part.length === PER_END ? "done" : ""}" aria-label="${e + 1}엔드 합 ${sum}점, 누계 ${run}점"><b>${sum}</b>${e ? `<small>누계 ${run}</small>` : ""}</span>`;
+}
+const endSums = list => Array.from({ length: Math.ceil(list.length / PER_END) }, (_, e) => list.slice(e * PER_END, (e + 1) * PER_END).reduce((t, a) => t + pts(a.k), 0));
 const zone = k => ({X:"gold","10":"gold","9":"gold","8":"red","7":"red","6":"blue","5":"blue","4":"black","3":"black","2":"white","1":"white",M:"miss"})[k];
 
 /* =====================================================================
@@ -797,7 +816,7 @@ function drawScore() {
   drawMarks();
   // 6발씩 한 줄(엔드)로 점수 보여 주기
   const slots = Math.min(MAX_ARROWS, Math.max(PER_END, Math.ceil((arrows.length + 1) / PER_END) * PER_END));
-  let html = "";
+  let html = endHead();
   for (let e = 0; e < slots / PER_END; e++) {
     html += `<div class="end"><span class="lab">${e+1}엔드</span>`;
     for (let j = 0; j < PER_END; j++) {
@@ -805,7 +824,7 @@ function drawScore() {
       html += a ? `<button class="ar z-${zone(a.k)} ${i===sel?"sel":""}" data-i="${i}" aria-label="${i+1}번째 화살 ${a.k}">${a.k}</button>`
                 : `<span class="ar empty"></span>`;
     }
-    html += `</div>`;
+    html += endSumCell(arrows, e) + `</div>`;
   }
   $("arrows").innerHTML = html;
   const isFull = full();
@@ -1339,7 +1358,7 @@ function drawTeacherRec() {
       if (!r || !r.count) return `<tr><td>${esc(st.sid)}</td><td>${nm}</td><td colspan="7" class="small">기록 없음</td><td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">입력</button></td></tr>`;
       return `<tr><td>${esc(st.sid)}</td><td>${nm}</td><td class="num">${r.count}</td><td class="num">${r.total}</td><td class="num">${r.xs || 0}</td>
         <td class="num"><b>${r.avg.toFixed(2)}</b></td><td class="num">${rankIn[st.sid] ?? "–"}</td><td class="num">${allRank[st.sid] ?? "–"}</td>
-        <td class="scores">${r.arrows.map(a => a.k).join(" ")}</td>
+        <td class="scores">${endSums(r.arrows).map((sum, e) => `<div class="e">${e + 1}엔드: ${r.arrows.slice(e * PER_END, (e + 1) * PER_END).map(a => a.k).join(" ")} → <b>${sum}</b></div>`).join("")}</td>
         <td class="act"><button class="mini line-btn" data-ed="${esc(st.sid)}">고치기</button></td></tr>`;
     }).join("") + `</tbody></table>`;
 }
@@ -1466,12 +1485,12 @@ function openEditor(sid) {
 }
 function drawEditor() {
   const a = ED.arrows;
-  let h = "";
+  let h = endHead();
   for (let e = 0; e < Math.max(1, Math.ceil(a.length / PER_END)); e++) {
     h += `<div class="end"><span class="lab">${e+1}엔드</span>`;
     for (let j = 0; j < PER_END; j++) { const i = e * PER_END + j, x = a[i];
       h += x ? `<button class="ar z-${zone(x.k)} ${i === ED.sel ? "sel" : ""}" data-i="${i}">${x.k}</button>` : `<span class="ar empty"></span>`; }
-    h += `</div>`;
+    h += endSumCell(a, e) + `</div>`;
   }
   $("edArrows").innerHTML = h;
   $("edMarks").innerHTML = a.map((x, i) => x.x === undefined ? "" : xMark(x.x, x.y, { color: i === ED.sel ? "#e6007e" : "#111", size: i === ED.sel ? 0.07 : 0.05 })).join("");
@@ -1508,11 +1527,13 @@ $("edDelAll").onclick = async () => {
 
 /* ---------- 엑셀(CSV) 내려받기: 모든 날짜·모든 학생 ---------- */
 $("csvBtn").onclick = () => {
-  const rows = [["날짜", "반", "번호", "학번", "이름", "발수", "합계", "X개수", "한발평균", ...Array.from({ length: MAX_ARROWS }, (_, i) => `${i + 1}발`)]];
+  const ENDS = MAX_ARROWS / PER_END;
+  const rows = [["날짜", "반", "번호", "학번", "이름", "발수", "합계", "X개수", "한발평균", ...Array.from({ length: ENDS }, (_, e) => `${e + 1}엔드합`), ...Array.from({ length: MAX_ARROWS }, (_, i) => `${i + 1}발`)]];
   [...T.sessions].filter(s => s.count > 0)
     .sort((a, b) => a.date.localeCompare(b.date) || a.sid.localeCompare(b.sid))
     .forEach(s => { const st = T.students[s.sid] || {};
-      rows.push([s.date, s.cls, st.no ?? "", s.sid, st.name ?? "", s.count, s.total, s.xs || 0, s.avg, ...s.arrows.map(a => a.k)]); });
+      const es = endSums(s.arrows);
+      rows.push([s.date, s.cls, st.no ?? "", s.sid, st.name ?? "", s.count, s.total, s.xs || 0, s.avg, ...Array.from({ length: ENDS }, (_, e) => es[e] ?? ""), ...s.arrows.map(a => a.k)]); });
   if (rows.length === 1) return toast("내려받을 기록이 아직 없어요.");
   const csv = "﻿" + rows.map(r => r.map(v => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; }).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
